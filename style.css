@@ -54,6 +54,17 @@ a:hover{
     color: #fff;
 }
 
+.swatch{
+    display: inline-block;
+    width: 1lh;
+    height: 1lh;
+    margin: 2px;
+    padding: 0;
+    outline: solid 1px white;
+    border: solid 1px black;
+    border-radius: 1px;
+}
+
 .panel{
     border:none;
     background: #263f61;

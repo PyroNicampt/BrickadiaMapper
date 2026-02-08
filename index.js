@@ -290,8 +290,18 @@ async function loadMapperData(file){
                 displayName: mDat.owners.DisplayNames[ownerIndex],
                 userName: mDat.owners.UserNames[ownerIndex],
                 userId: mDat.owners.UserIds[ownerIndex],
-            }
+            },
         };
+        markerData.colors = {};
+        for(let colorName in mDat.entities.ColorsAndAlphas[i]){
+            markerData.colors[colorName] = new Color(
+                mDat.entities.ColorsAndAlphas[i][colorName].R / 255,
+                mDat.entities.ColorsAndAlphas[i][colorName].G / 255,
+                mDat.entities.ColorsAndAlphas[i][colorName].B / 255,
+                mDat.entities.ColorsAndAlphas[i][colorName].A / 255,
+            );
+        }
+        
         let truePosition = {
             y: markerData.position.x * Config.coordScaleFac,
             x: markerData.position.y * Config.coordScaleFac,
@@ -301,9 +311,15 @@ async function loadMapperData(file){
             + `<div>Owner: ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
             + `<div>Position: ${formatVec(truePosition, 2)}</div>`
             + `<div>Velocity: ${formatVec(markerData.velocity, 3)}</div>`
+            + `<div>Angular Velocity: ${formatVec(markerData.angularVelocity, 1)}</div>`
             + `<div>${markerData.frozen ? 'Frozen' : 'Unfrozen'}</div>`
             + `<div>${markerData.sleeping ? 'Asleep' : 'Awake'}</div>`
         ;
+        markerData.tooltip += '<div>Colors:</div><div style="font-size:16">';
+        for(let col in markerData.colors){
+            markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
+        }
+        markerData.tooltip += '</div>';
         markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
         MapData.addMarker(markerData);
     }
@@ -318,9 +334,6 @@ async function loadMapperData(file){
             tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`,
         });
     }
-    /*for(let poi of poiData){
-        MapData.addPoi(poi);
-    }*/
 }
 
 function redrawMap(){
