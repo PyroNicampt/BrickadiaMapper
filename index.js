@@ -210,7 +210,11 @@ function tooltipSetup(){
 
     document.addEventListener('copy', event => {
         if(MapData.tooltipClipboard){
-            event.clipboardData.setData('text/plain', MapData.tooltipClipboard);
+            if(typeof(MapData.tooltipClipboard) == 'function'){
+                event.clipboardData.setData('text/plain', MapData.tooltipClipboard());
+            }else{
+                event.clipboardData.setData('text/plain', MapData.tooltipClipboard);
+            }
             event.preventDefault();
         }
     });
@@ -300,7 +304,7 @@ async function loadMapperData(file){
             + `<div>${markerData.frozen ? 'Frozen' : 'Unfrozen'}</div>`
             + `<div>${markerData.sleeping ? 'Asleep' : 'Awake'}</div>`
         ;
-        markerData.clipboard = `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
+        markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
         MapData.addMarker(markerData);
     }
     for(let chunk of mDat.chunks){
