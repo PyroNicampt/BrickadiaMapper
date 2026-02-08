@@ -87,6 +87,24 @@ let settingEntries = [
         saveState: true,
         state: 'Your Name Here',
         placeholder: 'Your Name Here',
+    },
+    {
+        label: 'Owner Filter',
+        id: 'field_ownerFilter',
+        saveState: false,
+        state: '',
+        placeholder: 'Name/Regex/UUID',
+        func: state => {
+            let regMatch = /^\/(?<expression>.+)\/(?<flags>[dgimsuvy]*)$/.exec(state);
+            if(regMatch){
+                try{
+                    MapData.setSearchFilter(RegExp(regMatch.groups.expression, regMatch.groups.flags));
+                }catch(e){}
+            }else{
+                MapData.setSearchFilter(state);
+            }
+            MapData.view.dirty = true;
+        }
     }
 ];
 
@@ -200,12 +218,13 @@ function addSettingEntry(thisSetting, parent, indent=0){
                         if(thisSetting.saveState) saveSetting(thisSetting.id, thisSetting.inputElement.value);
                     });
                 }
+            }else if(thisSetting.func){
+                thisSetting.inputElement.addEventListener('input', e => {
+                    thisSetting.func(thisSetting.inputElement.value);
+                });
             }
             if(thisSetting.saveState){
                 thisSetting.inputElement.addEventListener('input', e => {
-                    if(!thisSetting.button && thisSetting.func){
-                        thisSetting.func(thisSetting.inputElement.value);
-                    }
                     saveSetting(thisSetting.id, e.target.value);
                 });
             }

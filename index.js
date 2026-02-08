@@ -348,6 +348,7 @@ function redrawMap(){
                 if(!MapData.layers.entities_frozen && marker.frozen) break;
                 if(!MapData.layers.entities_asleep && marker.sleeping) break;
                 if(!MapData.layers.entities_awake && !(marker.frozen || marker.sleeping)) break;
+                if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
                 marker.visible = true;
                 markerCount++;
                 if(marker.frozen) curSprite = Config.spriteBounds.entity_frozen;

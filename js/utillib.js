@@ -70,6 +70,21 @@ export function titleCase(text){
     return '';
 }
 
+const uidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+export function testOwner(query, owner){
+    if(!owner || !query) return true;
+    if(typeof(query) == 'string'){
+        if(uidRegex.test(query)){
+            return owner.userId.replaceAll('-','') == query.replaceAll('-', '').toLowerCase();
+        }else{
+            query = query.toLowerCase();
+            return owner.userName.toLowerCase().includes(query) || owner.displayName.toLowerCase().includes(query);
+        }
+    }else{
+        return query.test(owner.userName) || query.test(owner.displayName);
+    }
+}
+
 const cardinalDirections = [
     'North',
     'Northeast',

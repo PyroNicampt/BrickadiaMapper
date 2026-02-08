@@ -12,6 +12,11 @@ let visibleMarkers = [];
 
 export let testPoint = {x:0,y:0};
 
+export let searchFilter = '';
+export function setSearchFilter(filter){
+    searchFilter = filter;
+}
+
 let locationData = null;
 export let playerMarker = {
     type: 'player',
