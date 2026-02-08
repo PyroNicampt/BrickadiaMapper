@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link href="favicon.png" rel="icon">
+    <link href="style.css" rel="stylesheet" type="text/css" media="all">
+    <title>Derail Valley Community Map</title>
+    <meta property="og:title" content="Derail Valley Community Map">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pyronicampt.github.io/DV-Community-Map/">
+    <meta property="og:image" content="https://pyronicampt.github.io/DV-Community-Map/opengraph.png">
+    <meta property="og:description" content="Web-based map of Derail Valley">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <script type="module" src="index.js"></script>
+  </head>
+  <body>
+    <div id="mapContainer">
+        <canvas id="mapCanvas"></canvas>
+        <canvas id="dynCanvas"></canvas>
+        <div id="tooltip" class="panel" style="display:none"></div>
+    </div>
+	
+    <div id="stats" class="orange">
+        <div id="navigationControls">
+            <button id="navZoomIn" class="panel orange">+</button>
+            <button id="navZoomOut" class="panel orange">-</button>
+        </div>
+        <div id="zoomLevelDisplay"></div>
+        <div id="cursorCoordDisplay"></div>
+        Map v0.6.7 alpha
+        <br>
+        Updated for Game Build 99.7
+        <br>
+        This tool is a fan work, Derail Valley owned by Altfuture
+    </div>
+    <div id="topleft">
+        <div id="headerbar" class="panel orange">
+            <div>
+                <span id="redrawTrigger"></span>DV Community Map
+            </div>
+        </div>
+        <div id="legend">
+            <div id="legendContents">
+                <div class="panel linkpanel">
+                    <a href="https://github.com/PyroNicampt/DV-Community-Map">Source</a>
+                    <a href="https://github.com/PyroNicampt/DV-Community-Map/issues">Issue Tracker</a>
+                    <a href="https://derailvalley.wiki.gg/wiki/Derail_Valley_Wiki">DV Wiki</a>
+                    <a href="https://wiki.derailvalley.com/wiki/Main_Page">Official Manual</a>
+                    <a href="https://github.com/PyroNicampt/DV-Community-Map/releases">Location Mod</a>
+                </div>
+                <div class="panel">
+                    Welcome to the WIP community map of <a href="https://www.derailvalley.com/" style="white-space:nowrap;">Derail Valley</a>, a resource for documenting and displaying all tracks and points of interest.
+                    <p>
+                        Problems? Suggestions? Head over to <a href="https://github.com/PyroNicampt/DV-Community-Map/issues">the issue tracker</a> and see if it's already there, or submit if not. Or contribute a fix yourself if you really want!
+                    </p>
+                    <hr style="margin: 5px 0;">
+                    Hover over tracks and objects for detailed information.
+                    <hr style="margin: 5px 0;">
+                    Last update <span id="lastUpdate"></span>:
+                    <div id="changelog"></div>
+                </div>
+                <div class="panel">
+                    <h3>Key</h3>
+                    <hr>
+                    <div id="legendKey"></div>
+                    <hr>
+                    Track Colors:
+                    <div id="legendKeyColors"></div>
+                </div>
+                <div id="settingsPanel" class="panel">
+                    <h3>Map Settings</h3>
+                    <div class="quiet" style="margin: 0 0 5px 0;font-size: 10px;">(Page uses local-only cookies to keep settings)</div>
+                    <hr>
+                </div>
+            </div>
+            <button id="legendButton" class="panel orange"><svg style="transform:rotate(180deg) translateY(0px)" viewBox="0 0 32 32"><path fill="currentColor" d="M31 16 20 31l-16 0L15 16 4 1l16 0Z"/></svg></button>
+        </div>
+    </div>
+    <div style="display:none">
+        <img id="mapSprites" src="mapSprites.svg">
+        <img id="mapTerrain" src="">
+    </div>
+  </body>
+</html>
