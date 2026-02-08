@@ -249,6 +249,8 @@ async function loadMapperData(file){
     if(typeof(file) == 'object') mDat = file;
     else if(typeof(file) == 'string') mDat = await (await fetch(new Request(file))).json();
 
+    if(!(mDat && mDat.owners && mDat.entities && mDat.chunks)) return;
+
     const formatVec = (vec, decimals = 1) => {
         return `(${Utils.round(vec.x, decimals)}, ${Utils.round(vec.y, decimals)}, ${Utils.round(vec.z, decimals)})`;
     }
@@ -298,7 +300,7 @@ async function loadMapperData(file){
             + `<div>${markerData.frozen ? 'Frozen' : 'Unfrozen'}</div>`
             + `<div>${markerData.sleeping ? 'Asleep' : 'Awake'}</div>`
         ;
-        markerData.clipboard = `/tp py ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
+        markerData.clipboard = `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
         MapData.addMarker(markerData);
     }
     for(let chunk of mDat.chunks){

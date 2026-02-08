@@ -81,6 +81,13 @@ let settingEntries = [
             MapData.view.dirty = true;
         },
     },
+    {
+        label: 'Username',
+        id: 'field_username',
+        saveState: true,
+        state: 'Your Name Here',
+        placeholder: 'Your Name Here',
+    }
 ];
 
 const legendKey = document.getElementById('legendKey');
@@ -196,6 +203,9 @@ function addSettingEntry(thisSetting, parent, indent=0){
             }
             if(thisSetting.saveState){
                 thisSetting.inputElement.addEventListener('input', e => {
+                    if(!thisSetting.button && thisSetting.func){
+                        thisSetting.func(thisSetting.inputElement.value);
+                    }
                     saveSetting(thisSetting.id, e.target.value);
                 });
             }
@@ -224,9 +234,11 @@ function addSettingEntry(thisSetting, parent, indent=0){
     }
 
     if(thisSetting.settingType == 'field'){
-        thisSetting.buttonElement.style.margin = `0 0.5em 0 ${indent}em`;
-        thisSetting.buttonElement.style.padding = `0 0.2em`;
-        thisSetting.divContainer.prepend(thisSetting.buttonElement);
+        if(thisSetting.buttonElement){
+            thisSetting.buttonElement.style.margin = `0 0.5em 0 ${indent}em`;
+            thisSetting.buttonElement.style.padding = `0 0.2em`;
+            thisSetting.divContainer.prepend(thisSetting.buttonElement);
+        }
     }
     if(thisSetting.inputElement){
         thisSetting.inputElement.id = thisSetting.id;
