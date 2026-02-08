@@ -18,283 +18,68 @@ let settingEntries = [
         }
     },
     {
-        label: 'Color Mode',
-        id: 'dropdown_trackColor',
-        saveState: true,
-        options: [
-            'None',
-            'Grade',
-            'Altitude',
-            'Speed',
-            'Track Type',
-            'Track Random',
-            'Curve Random',
-        ],
-        state: 'Grade',
-        func: state =>{
-            MapData.setTrackColorMode(state);
-        }
-    },
-    {
-        label: 'Signage',
-        id: 'toggle_signage',
+        label: 'Markers',
+        id: 'toggle_markers',
         saveState: true,
         state: true,
         func: state =>{
-            MapData.layers.signage = state;
+            MapData.layers.markers = state;
             MapData.view.dirty = true;
         },
         children: [
             {
-                label: 'Speed Signage',
-                id: 'toggle_speedSigns',
+                label: 'Entities',
+                id: 'toggle_entities',
                 saveState: true,
                 state: true,
                 func: state =>{
-                    MapData.layers.speedSigns = state;
+                    MapData.layers.entities = state;
                     MapData.view.dirty = true;
-                },
-            },
-            {
-                label: 'Grade Arrows',
-                id: 'toggle_gradeSigns',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.gradeArrows = state;
-                    MapData.view.dirty = true;
-                },
-            },
-            {
-                label: 'Yard Signage',
-                id: 'toggle_yardSigns',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.yardSigns = state;
-                    MapData.view.dirty = true;
-                },
-            },
-            {
-                label: 'Junctions',
-                id: 'toggle_junctions',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.junctions = state;
-                    MapData.view.dirty = true;
-                },
-            }
-        ],
-    },
-    {
-        label: 'Points of Interest',
-        id: 'toggle_poi',
-        saveState: true,
-        state: true,
-        func: state => {
-            MapData.layers.poi = state;
-            MapData.view.dirty = true;
-        },
-        children: [
-            {
-                label: 'Stations',
-                id: 'toggle_stations',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.stations = state;
-                    MapData.view.dirty = true;
-                }
-            },
-            {
-                label: 'Services',
-                id: 'toggle_services',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.services = state;
-                    MapData.view.dirty = true;
-                },
-            },
-            {
-                label: 'Landmarks',
-                id: 'toggle_landmarks',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.landmarks = state;
-                    MapData.view.dirty = true;
-                },
-            },
-            {
-                label: 'Demonstrator Spawns',
-                id: 'dropdown_demonstrators',
-                saveState: true,
-                options: [
-                    'None',
-                    'Hint',
-                    'Exact',
-                ],
-                state: 'None',
-                func: state =>{
-                    MapData.layers.demonstratorExact = state == 'Exact';
-                    MapData.layers.demonstratorHint = state == 'Hint';
-                    MapData.view.dirty = true;
-                },
-            }
-        ]
-    },
-    {
-        label: 'Grade Arrow Direction',
-        id: 'dropdown_gradeArrowDirection',
-        saveState: true,
-        options: [
-            'Uphill',
-            'Downhill',
-        ],
-        state: 'Uphill',
-        func: state =>{
-            MapData.layers.gradeDirection = state == 'Downhill' ? 'Down' : '';
-            MapData.view.dirty = true;
-        }
-    },
-    {
-        label: 'Terrain',
-        id: 'dropdown_terrain',
-        saveState: true,
-        options: [
-            'None',
-            'Simple',
-            'DVRT',
-        ],
-        state: 'None',
-        func: state =>{
-            console.log(state);
-            let mapTerrain = document.getElementById('mapTerrain');
-            if(state == 'None'){
-                MapData.layers.terrain = false;
-                MapData.view.dirty = true;
-            }else{
-                mapTerrain.onload = () => {
-                    MapData.layers.terrain = true;
-                    MapData.view.dirty = true;
-                }
-                if(state == 'Simple'){
-                    document.getElementById('mapTerrain').src = 'terrains/simple.jpg';
-                }else if(state == 'DVRT'){
-                    document.getElementById('mapTerrain').src = 'terrains/dvrt.jpg';
-                }
-            }
-        }
-    },
-    {
-        label: '<hr><div class="quiet">Community Map Location Mod</div>',
-        id: 'header_cmlm',
-    },
-    {
-        label: 'Location Host',
-        id: 'field_locationHost',
-        state: 'localhost:9090',
-        placeholder: 'localhost:9090',
-        saveState: true,
-        button: 'Connect',
-        func: state =>{
-            if(state == '') state = 'localhost:9090';
-            document.getElementById('field_locationHost').value = state;
-            let button = document.getElementById('field_locationHost').nextSibling;
-            if(button.value.startsWith('Connect')){
-                MapData.connectPlayerLocation(state, button);
-            }else if(button.value.startsWith('Disconnect')){
-                button.value = 'Disconnect';
-                MapData.disconnectPlayerLocation();
-            }else if(!button.value.startsWith('Fetch')){
-                button.value = 'Connect';
-                MapData.disconnectPlayerLocation();
-            }else{
-                MapData.disconnectPlayerLocation();
-            }
-        }
-    },
-    {
-        label: 'Location Update Rate (seconds)',
-        id: 'dropdown_locationFrequency',
-        tooltip: 'Lower update intervals may cause poor performance',
-        saveState: true,
-        state: '0.2',
-        options: [
-            '0.05',
-            '0.1',
-            '0.2',
-            '0.25',
-            '0.5',
-            '1',
-            '2',
-            '5',
-            '10',
-            '30',
-        ],
-        func: state =>{
-            MapData.setLocationUpdateRate(Number(state) * 1000);
-        }
-    },
-    {
-        label: 'Dynamic Objects',
-        id: 'toggle_dynamic',
-        saveState: true,
-        state: true,
-        func: state => {
-            MapData.layers.dynamic = state;
-            MapData.view.dynDirty = true;
-        },
-        children: [
-            {
-                label: 'Player',
-                id: 'toggle_player',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.player = state;
-                    MapData.view.dynDirty = true;
-                },
-                children: [
-                    {
-                        label: 'Follow Player',
-                        tooltip: 'Keep View centered on player',
-                        id: 'toggle_gps',
-                        saveState: true,
-                        state: true,
-                        func: state =>{
-                            MapData.layers.gps = state;
-                            MapData.view.dynDirty = true;
-                        }
-                    }
-                ]
-            },
-            {
-                label: 'Train Cars',
-                id: 'toggle_cars',
-                saveState: true,
-                state: true,
-                func: state =>{
-                    MapData.layers.cars = state;
-                    MapData.view.dynDirty = true;
                 },
                 children:[
                     {
-                        label: 'Non-Player Trains',
-                        tooltip: 'Other trains with active locomotives',
-                        id: 'toggle_otherCars',
+                        label: 'Awake',
+                        id: 'toggle_entities_awake',
                         saveState: true,
                         state: true,
-                        func: state =>{
-                            MapData.layers.otherCars = state;
-                            MapData.view.dynDirty = true;
+                        func: state => {
+                            MapData.layers.entities_awake = state;
+                            MapData.view.dirty = true;
                         },
-                    }
+                    },
+                    {
+                        label: 'Asleep',
+                        id: 'toggle_entities_asleep',
+                        saveState: true,
+                        state: true,
+                        func: state => {
+                            MapData.layers.entities_asleep = state;
+                            MapData.view.dirty = true;
+                        },
+                    },
+                    {
+                        label: 'Frozen',
+                        id: 'toggle_entities_frozen',
+                        saveState: true,
+                        state: true,
+                        func: state => {
+                            MapData.layers.entities_frozen = state;
+                            MapData.view.dirty = true;
+                        },
+                    },
                 ]
             },
-        ]
+        ],
+    },
+    {
+        label: 'Occupied Chunks',
+        id: 'toggle_brickedchunks',
+        saveState: true,
+        state: true,
+        func: state => {
+            MapData.layers.brickedchunks = state;
+            MapData.view.dirty = true;
+        },
     },
 ];
 
@@ -550,6 +335,10 @@ async function setLastUpdateData(){
 }
 
 function populateKey(){
+    addKeyEntry('entity_awake', 'Awake Entity');
+    addKeyEntry('entity_asleep', 'Sleeping Entity');
+    addKeyEntry('entity_frozen', 'Frozen Entity');
+    /*
     addKeyEntry('gradeArrow', 'Grade Indication')
     addKeyEntry('speed_5', 'Speed Limit');
     addKeyEntry('junction', 'Junction/Switch');
@@ -563,7 +352,7 @@ function populateKey(){
     addKeyEntry('landmark', 'Landmark');
     addKeyEntry('garage', 'Garage');
     addKeyEntry('demonstrator', 'Demonstrator Spawn');
-    addKeyEntry('player', 'Player');
+    addKeyEntry('player', 'Player');*/
     //Add empty entries to make entries align right in the columns.
     /*for(let i=0; i<1; i++){
         addKeyEntry();
