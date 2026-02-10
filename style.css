@@ -124,6 +124,12 @@ a:hover{
     max-width: fit-content;
 }
 
+#warningPanel{
+    font-weight: bold;
+    background: #e75353;
+    font-size: smaller;
+}
+
 #legendButton{
     padding: 8px;
     height: var(--legendButtonSize);

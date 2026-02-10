@@ -70,7 +70,7 @@ export function titleCase(text){
     return '';
 }
 
-const uidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const uidRegex = /[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}/i;
 export function testOwner(query, owner){
     if(!owner || !query) return true;
     if(typeof(query) == 'string'){

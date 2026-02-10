@@ -21,6 +21,7 @@ const mapSprites = document.getElementById('mapSprites');
 const mapTerrain = document.getElementById('mapTerrain');
 const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
 const markerCountDisplay = document.getElementById('markerCountDisplay');
+const warningPanel = document.getElementById('warningPanel');
 
 let isNavigating = false;
 
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.ondrop = async event => {
         event.preventDefault();
         MapData.reset();
+        warningPanel.innerHTML = '';
+        warningPanel.style.display = 'none';
         for(let item of event.dataTransfer.items){
             if(item.kind == 'file' && (item.type === 'application/json' || item.type === 'text/json')){
                 await loadMapperData(JSON.parse(await(item.getAsFile().text())));
@@ -253,7 +256,14 @@ async function loadMapperData(file){
     if(typeof(file) == 'object') mDat = file;
     else if(typeof(file) == 'string') mDat = await (await fetch(new Request(file))).json();
 
-    if(!(mDat && mDat.owners && mDat.entities && mDat.chunks)) return;
+    if(!(mDat && mDat.owners && mDat.entities && mDat.chunks)){
+        writeWarning('Invalid JSON data');
+        return;
+    };
+    if(!mDat.version || mDat.version < Config.mapperVersion){
+        writeWarning(`Mapper file is out of date (Version ${mDat.version ?? 0}, latest is ${Config.mapperVersion}). Map data may be incomplete or display incorrectly.`);
+    }
+
 
     const formatVec = (vec, decimals = 1) => {
         return `(${Utils.round(vec.x, decimals)}, ${Utils.round(vec.y, decimals)}, ${Utils.round(vec.z, decimals)})`;
@@ -301,25 +311,46 @@ async function loadMapperData(file){
                 mDat.entities.ColorsAndAlphas[i][colorName].A / 255,
             );
         }
+        let instanceInfo = '';
+        if(mDat.entities.instances){
+            instanceInfo += `<div><b>Type:</b> ${mDat.entities.instances[i].name.replaceAll(/^Entity_/g, '')}</div>`;
+            for(let property in mDat.entities.instances[i]){
+                if(property != 'name' && property != 'class'){
+                    instanceInfo += `<div><b>${property}:</b> ${mDat.entities.instances[i][property]}</div>`;
+                }
+            }
+            if(mDat.entities.instances[i].class == 'BrickGridDynamicActor'){
+                delete markerData.colors;
+            }
+        }
         
         let truePosition = {
             y: markerData.position.x * Config.coordScaleFac,
             x: markerData.position.y * Config.coordScaleFac,
             z: markerData.position.z * Config.coordScaleFac
         };
-        markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
-            + `<div>Owner: ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
-            + `<div>Position: ${formatVec(truePosition, 2)}</div>`
-            + `<div>Velocity: ${formatVec(markerData.velocity, 3)}</div>`
-            + `<div>Angular Velocity: ${formatVec(markerData.angularVelocity, 1)}</div>`
-            + `<div>${markerData.frozen ? 'Frozen' : 'Unfrozen'}</div>`
-            + `<div>${markerData.sleeping ? 'Asleep' : 'Awake'}</div>`
-        ;
-        markerData.tooltip += '<div>Colors:</div><div style="font-size:16">';
-        for(let col in markerData.colors){
-            markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
+        let physState;
+        if(markerData.frozen){
+            physState = 'Frozen';
+        }else{
+            if(markerData.sleeping) physState = 'Sleeping';
+            else physState = 'Awake';
         }
-        markerData.tooltip += '</div>';
+        markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
+            + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
+            + instanceInfo
+            + `<div><b>Position:</b> ${formatVec(truePosition, 2)}</div>`
+            + `<div><b>Velocity:</b> ${formatVec(markerData.velocity, 3)}</div>`
+            + `<div><b>Angular Velocity:</b> ${formatVec(markerData.angularVelocity, 1)}</div>`
+            + `<div>${physState}</div>`
+        ;
+        if(markerData.colors){
+            markerData.tooltip += '<div><b>Colors:</b></div><div style="font-size:16">';
+            for(let col in markerData.colors){
+                markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
+            }
+            markerData.tooltip += '</div>';
+        }
         markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
         MapData.addMarker(markerData);
     }
@@ -372,6 +403,7 @@ function redrawMap(){
             case 'chunk':
                 if(!(MapData.layers.brickedchunks)) break;
                 marker.visible = true;
+                markerCount++;
                 spriteSize = 20.48 * MapData.view.scale;
                 mapctx.beginPath();
                 mapctx.rect(
@@ -412,4 +444,9 @@ function redrawMap(){
     }
     markerCountDisplay.innerHTML = markerCount + ' markers visible';
     MapData.view.dirty = false;
+}
+
+function writeWarning(warning){
+    warningPanel.style.display = 'block';
+    warningPanel.innerHTML += warning + '<br>';
 }

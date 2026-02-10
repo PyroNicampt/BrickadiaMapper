@@ -56,6 +56,8 @@ export const coordScaleFac = 100;
 
 export const maxZoneLength = 700;
 
+export const mapperVersion = 1;
+
 /** How many pixels around the view is still considered "visible", beyond this and items are culled. */
 export const viewCullMargin = 90;
 
