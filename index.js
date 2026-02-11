@@ -403,7 +403,6 @@ function redrawMap(){
             case 'chunk':
                 if(!(MapData.layers.brickedchunks)) break;
                 marker.visible = true;
-                markerCount++;
                 spriteSize = 20.48 * MapData.view.scale;
                 mapctx.beginPath();
                 mapctx.rect(
