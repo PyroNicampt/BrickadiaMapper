@@ -256,7 +256,7 @@ async function loadMapperData(file){
     if(typeof(file) == 'object') mDat = file;
     else if(typeof(file) == 'string') mDat = await (await fetch(new Request(file))).json();
 
-    if(!(mDat && mDat.owners && mDat.entities && mDat.chunks)){
+    if(!(mDat && mDat.owners)){
         writeWarning('Invalid JSON data');
         return;
     };
@@ -268,102 +268,158 @@ async function loadMapperData(file){
     const formatVec = (vec, decimals = 1) => {
         return `(${Utils.round(vec.x, decimals)}, ${Utils.round(vec.y, decimals)}, ${Utils.round(vec.z, decimals)})`;
     }
-    for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
-        let ownerIndex = mDat.entities.OwnerIndices[i];
-        let markerData = {
-            type: 'entity',
-            position: {
-                y: mDat.entities.Locations[i].X/Config.coordScaleFac,
-                x: mDat.entities.Locations[i].Y/Config.coordScaleFac,
-                z: mDat.entities.Locations[i].Z/Config.coordScaleFac,
-            },
-            rotation: {
-                x: mDat.entities.Rotations[i].X,
-                y: mDat.entities.Rotations[i].Y,
-                z: mDat.entities.Rotations[i].Z,
-                w: mDat.entities.Rotations[i].W,
-            },
-            velocity: {
-                x: mDat.entities.LinearVelocities[i].X,
-                y: mDat.entities.LinearVelocities[i].Y,
-                z: mDat.entities.LinearVelocities[i].Z,
-            },
-            angularVelocity: {
-                x: mDat.entities.AngularVelocities[i].X,
-                y: mDat.entities.AngularVelocities[i].Y,
-                z: mDat.entities.AngularVelocities[i].Z,
-            },
-            index: mDat.entities.PersistentIndices[i],
-            frozen: mDat.entities.PhysicsLockedFlags[i],
-            sleeping: mDat.entities.PhysicsSleepingFlags[i],
-            owner: {
-                displayName: mDat.owners.DisplayNames[ownerIndex],
-                userName: mDat.owners.UserNames[ownerIndex],
-                userId: mDat.owners.UserIds[ownerIndex],
-            },
-        };
-        markerData.colors = {};
-        for(let colorName in mDat.entities.ColorsAndAlphas[i]){
-            markerData.colors[colorName] = new Color(
-                mDat.entities.ColorsAndAlphas[i][colorName].R / 255,
-                mDat.entities.ColorsAndAlphas[i][colorName].G / 255,
-                mDat.entities.ColorsAndAlphas[i][colorName].B / 255,
-                mDat.entities.ColorsAndAlphas[i][colorName].A / 255,
-            );
-        }
-        let instanceInfo = '';
-        if(mDat.entities.instances){
-            instanceInfo += `<div><b>Type:</b> ${mDat.entities.instances[i].name.replaceAll(/^Entity_/g, '')}</div>`;
-            for(let property in mDat.entities.instances[i]){
-                if(property != 'name' && property != 'class'){
-                    instanceInfo += `<div><b>${property}:</b> ${mDat.entities.instances[i][property]}</div>`;
+    if(mDat.entities){
+        for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
+            let ownerIndex = mDat.entities.OwnerIndices[i];
+            let markerData = {
+                type: 'entity',
+                position: {
+                    y: mDat.entities.Locations[i].X/Config.coordScaleFac,
+                    x: mDat.entities.Locations[i].Y/Config.coordScaleFac,
+                    z: mDat.entities.Locations[i].Z/Config.coordScaleFac,
+                },
+                rotation: {
+                    x: mDat.entities.Rotations[i].X,
+                    y: mDat.entities.Rotations[i].Y,
+                    z: mDat.entities.Rotations[i].Z,
+                    w: mDat.entities.Rotations[i].W,
+                },
+                velocity: {
+                    x: mDat.entities.LinearVelocities[i].X,
+                    y: mDat.entities.LinearVelocities[i].Y,
+                    z: mDat.entities.LinearVelocities[i].Z,
+                },
+                angularVelocity: {
+                    x: mDat.entities.AngularVelocities[i].X,
+                    y: mDat.entities.AngularVelocities[i].Y,
+                    z: mDat.entities.AngularVelocities[i].Z,
+                },
+                index: mDat.entities.PersistentIndices[i],
+                frozen: mDat.entities.PhysicsLockedFlags[i],
+                sleeping: mDat.entities.PhysicsSleepingFlags[i],
+                owner: {
+                    displayName: mDat.owners.DisplayNames[ownerIndex],
+                    userName: mDat.owners.UserNames[ownerIndex],
+                    userId: mDat.owners.UserIds[ownerIndex],
+                },
+            };
+            markerData.colors = {};
+            for(let colorName in mDat.entities.ColorsAndAlphas[i]){
+                markerData.colors[colorName] = new Color(
+                    mDat.entities.ColorsAndAlphas[i][colorName].R / 255,
+                    mDat.entities.ColorsAndAlphas[i][colorName].G / 255,
+                    mDat.entities.ColorsAndAlphas[i][colorName].B / 255,
+                    mDat.entities.ColorsAndAlphas[i][colorName].A / 255,
+                );
+            }
+            let instanceInfo = '';
+            if(mDat.entities.instances){
+                instanceInfo += `<div><b>Type:</b> ${mDat.entities.instances[i].name.replaceAll(/^Entity_/g, '')}</div>`;
+                for(let property in mDat.entities.instances[i]){
+                    if(property != 'name' && property != 'class'){
+                        instanceInfo += `<div><b>${property}:</b> ${mDat.entities.instances[i][property]}</div>`;
+                    }
+                }
+                if(mDat.entities.instances[i].class == 'BrickGridDynamicActor'){
+                    delete markerData.colors;
                 }
             }
-            if(mDat.entities.instances[i].class == 'BrickGridDynamicActor'){
-                delete markerData.colors;
+            
+            let truePosition = {
+                y: markerData.position.x * Config.coordScaleFac,
+                x: markerData.position.y * Config.coordScaleFac,
+                z: markerData.position.z * Config.coordScaleFac
+            };
+            let physState;
+            if(markerData.frozen){
+                physState = 'Frozen';
+            }else{
+                if(markerData.sleeping) physState = 'Sleeping';
+                else physState = 'Awake';
             }
-        }
-        
-        let truePosition = {
-            y: markerData.position.x * Config.coordScaleFac,
-            x: markerData.position.y * Config.coordScaleFac,
-            z: markerData.position.z * Config.coordScaleFac
-        };
-        let physState;
-        if(markerData.frozen){
-            physState = 'Frozen';
-        }else{
-            if(markerData.sleeping) physState = 'Sleeping';
-            else physState = 'Awake';
-        }
-        markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
-            + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
-            + instanceInfo
-            + `<div><b>Position:</b> ${formatVec(truePosition, 2)}</div>`
-            + `<div><b>Velocity:</b> ${formatVec(markerData.velocity, 3)}</div>`
-            + `<div><b>Angular Velocity:</b> ${formatVec(markerData.angularVelocity, 1)}</div>`
-            + `<div>${physState}</div>`
-        ;
-        if(markerData.colors){
-            markerData.tooltip += '<div><b>Colors:</b></div><div style="font-size:16">';
-            for(let col in markerData.colors){
-                markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
+            markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
+                + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
+                + instanceInfo
+                + `<div><b>Position:</b> ${formatVec(truePosition, 2)}</div>`
+                + `<div><b>Velocity:</b> ${formatVec(markerData.velocity, 3)}</div>`
+                + `<div><b>Angular Velocity:</b> ${formatVec(markerData.angularVelocity, 1)}</div>`
+                + `<div>${physState}</div>`
+            ;
+            if(markerData.colors){
+                markerData.tooltip += '<div><b>Colors:</b></div><div style="font-size:16">';
+                for(let col in markerData.colors){
+                    markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
+                }
+                markerData.tooltip += '</div>';
             }
-            markerData.tooltip += '</div>';
+            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
+            MapData.addMarker(markerData);
         }
-        markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
-        MapData.addMarker(markerData);
     }
-    for(let chunk of mDat.chunks){
-        MapData.addMarker({
-            type: 'chunk',
-            position: {
-                y: (chunk.position.x * 2048 + 2048)/Config.coordScaleFac,
-                x: (chunk.position.y * 2048)/Config.coordScaleFac,
-                z: (chunk.position.z * 2048)/Config.coordScaleFac,
-            },
-            tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`,
-        });
+    if(mDat.chunks){
+        for(let chunk of mDat.chunks){
+            MapData.addMarker({
+                type: 'chunk',
+                position: {
+                    y: (chunk.position.x * 2048 + 2048)/Config.coordScaleFac,
+                    x: (chunk.position.y * 2048)/Config.coordScaleFac,
+                    z: (chunk.position.z * 2048)/Config.coordScaleFac,
+                },
+                tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`,
+            });
+        }
+    }
+    if(mDat.components){
+        for(let component of mDat.components){
+            let markerData = {
+                type: 'component',
+                position:{
+                    y: component.position.x / Config.coordScaleFac,
+                    x: component.position.y / Config.coordScaleFac,
+                    z: component.position.z / Config.coordScaleFac,
+                },
+                owner: {
+                    displayName: mDat.owners.DisplayNames[component.owner],
+                    userName: mDat.owners.UserNames[component.owner],
+                    userId: mDat.owners.UserIds[component.owner],
+                },
+                minZoom: 0.1,
+            };
+            if(component.Input != component.Output){
+                if((component.name == 'BrickComponentType_WireGraphPseudo_BufferSeconds'
+                    && component.SecondsToWait < 0.1
+                    && component.ZeroSecondsToWait < 0.1)
+                    ||
+                    (component.name == 'BrickComponentType_WireGraphPseudo_BufferTicks')
+                    && component.TicksToWait < 10
+                    && component.ZeroTicksToWait < 10
+                    ){
+                    markerData.componentActive = 2;
+                    markerData.color = '#f7004aee';
+                }else{
+                    markerData.componentActive = 1;
+                    markerData.color = '#f4ae35dd';
+                }
+            }else{
+                markerData.componentActive = 0;
+                markerData.color = '#81e883cc';
+            }
+
+            let instanceInfo = '';
+            for(let property in component){
+                if(!['name', 'class', 'position', 'owner', 'grid'].includes(property)){
+                    instanceInfo += `<div><b>${property}:</b> ${component[property]}</div>`;
+                }
+            }
+            markerData.tooltip = `<h1>${component.name.replaceAll(/.*_(.+)$/g, '$1')} Component</h1><hr>`
+                + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
+                + `<div><b>Grid:</b> ${component.grid == 1 ? 'World' : component.grid}</div>`
+                + instanceInfo
+                + `<div><b>Position:</b> ${formatVec(component.position, 2)}</div>`
+            ;
+            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(component.position.x, 2)} ${(Utils.round(component.position.y, 2))} ${Utils.round(component.position.z, 2)} 0`;
+            MapData.addMarker(markerData);
+        }
     }
 }
 
@@ -418,6 +474,30 @@ function redrawMap(){
                 marker.tooltipHitzone.height = spriteSize;
                 marker.tooltipHitzone.offsetX = spriteSize * 0.5;
                 marker.tooltipHitzone.offsetY = -spriteSize * 0.5;
+                break;
+            case 'component':
+                if(!(MapData.layers.components)) break;
+                if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
+                marker.visible = true;
+                markerCount++;
+                spriteSize = Math.max(10, 0.10 * MapData.view.scale);
+                mapctx.beginPath();
+                mapctx.rect(
+                    markerX - 0.5 * spriteSize,
+                    markerY - 0.5 * spriteSize,
+                    spriteSize,
+                    spriteSize
+                );
+                mapctx.fillStyle = marker.color ?? '#000000aa';
+                mapctx.strokeStyle = '#000f';
+                mapctx.lineWidth = 1.0;
+                mapctx.stroke();
+                mapctx.fill();
+                if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
+                marker.tooltipHitzone.width = spriteSize;
+                marker.tooltipHitzone.height = spriteSize;
+                //marker.tooltipHitzone.offsetX = spriteSize * 0.5;
+                //marker.tooltipHitzone.offsetY = -spriteSize * 0.5;
                 break;
             default:
                 if(!MapData.layers.markers) break;

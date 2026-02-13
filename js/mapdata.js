@@ -112,6 +112,11 @@ function markerSortFunction(a, b){
     }
     if(a.type == 'entity') return 1;
     if(b.type == 'entity') return -1;
+    if(a.type == 'component' && b.type == 'component'){
+        return a.componentActive - b.componentActive;
+    }
+    if(a.type == 'component') return 1;
+    if(b.type == 'component') return -1;
     if(a.type == 'chunk') return -1;
     if(b.type == 'chunk') return 1;
     return 0;

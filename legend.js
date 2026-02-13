@@ -69,6 +69,16 @@ let settingEntries = [
                     },
                 ]
             },
+            {
+                label: 'Components',
+                id: 'toggle_components',
+                saveState: true,
+                state: false,
+                func: state =>{
+                    MapData.layers.components = state;
+                    MapData.view.dirty = true;
+                },
+            },
         ],
     },
     {
