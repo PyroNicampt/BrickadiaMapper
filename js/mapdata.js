@@ -76,12 +76,14 @@ export let view = {
         }
         view.dirty = false;
         view.dynDirty = false;
+        view.skewX = 0;
+        view.skewY = 0;
 
-        view.convertX = x => {
-            return x * view.scale * view.pixelRatio + view.x * view.pixelRatio;
+        view.convertX = (x, z) => {
+            return x * view.scale * view.pixelRatio + view.x * view.pixelRatio + z * view.skewX * view.pixelRatio * view.scale;
         }
-        view.convertY = y => {
-            return (matrix.minY+matrix.maxY-y) * view.scale * view.pixelRatio - view.y * view.pixelRatio;
+        view.convertY = (y, z) => {
+            return (matrix.minY+matrix.maxY-y) * view.scale * view.pixelRatio - view.y * view.pixelRatio + z * view.skewY * view.pixelRatio * view.scale;
         }
 
         view.unconvertX = x => {
@@ -104,22 +106,28 @@ export function sortMarkers(){
 }
 
 function markerSortFunction(a, b){
-    if(a.type == 'entity' && b.type == 'entity'){
-        if(!a.frozen && !a.sleeping) return 1;
-        if(!b.frozen && !b.sleeping) return -1;
-        if(!a.frozen) return 1;
-        if(!b.frozen) return -1;
+    if(a.type != b.type){ //Different marker types
+        if(a.type == 'entity') return 1;
+        if(b.type == 'entity') return -1;
+        if(a.type == 'component') return 1;
+        if(b.type == 'component') return -1;
+        
+        //Chunks always render below everything.
+        if(a.type == 'chunk') return -1;
+        if(b.type == 'chunk') return 1;
+    }else{ //Same marker type
+        if(a.type == 'entity'){
+            if(a.frozen != b.frozen && a.sleeping != b.sleeping){
+                if(!a.frozen && !a.sleeping) return 1;
+                if(!b.frozen && !b.sleeping) return -1;
+                if(!a.frozen) return 1;
+                if(!b.frozen) return -1;
+            }
+        }else if(a.type == 'component'){
+            if(a.componentActive != b.componentActive) return a.componentActive - b.componentActive;
+        }
     }
-    if(a.type == 'entity') return 1;
-    if(b.type == 'entity') return -1;
-    if(a.type == 'component' && b.type == 'component'){
-        return a.componentActive - b.componentActive;
-    }
-    if(a.type == 'component') return 1;
-    if(b.type == 'component') return -1;
-    if(a.type == 'chunk') return -1;
-    if(b.type == 'chunk') return 1;
-    return 0;
+    return a.position.z - b.position.z;
 }
 
 export function addMarker(markerData, level = 0){
@@ -162,10 +170,10 @@ export function testTooltip(cursorX, cursorY){
         }else if(marker.tooltipHitzone && marker.tooltipHitzone.width && marker.tooltipHitzone.height){
             width = marker.tooltipHitzone.width * 0.5/view.scale;
             height = marker.tooltipHitzone.height * 0.5/view.scale;
-            if(    marker.position.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale <= width
-                && marker.position.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale >= -width
-                && marker.position.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale <= height
-                && marker.position.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale >= -height){
+            if(    marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale <= width
+                && marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale >= -width
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale <= height
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale >= -height){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }
@@ -174,7 +182,7 @@ export function testTooltip(cursorX, cursorY){
                 radius = (marker.tooltipHitzone.radius ?? Config.tooltipHitzone.default.radius) / view.scale;
             else
                 radius = Config.tooltipHitzone.default.radius / view.scale;
-            if(Math.pow(marker.position.x - cursorX, 2) + Math.pow(marker.position.y - cursorY, 2) <= radius * radius){
+            if(Math.pow(marker.tooltipPosition.x - cursorX, 2) + Math.pow(marker.tooltipPosition.y - cursorY, 2) <= radius * radius){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }

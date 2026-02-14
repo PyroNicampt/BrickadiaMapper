@@ -17,13 +17,14 @@
 	
     <div id="stats" class="orange">
         <div id="navigationControls">
-            <button id="navZoomIn" class="panel orange">+</button>
-            <button id="navZoomOut" class="panel orange">-</button>
+            <button id="navSkew" class="panel" title="Skew"><span id="navSkewHandle"><span>&#x21c6;</span></span></button>
+            <button id="navZoomIn" class="panel orange" title="Zoom In">+</button>
+            <button id="navZoomOut" class="panel orange" title="Zoom Out">-</button>
         </div>
         <div id="zoomLevelDisplay"></div>
         <div id="cursorCoordDisplay"></div>
         <div id="markerCountDisplay"></div>
-        Map v0.0.3 alpha
+        Map v0.0.4 alpha
     </div>
     <div id="topleft">
         <div id="headerbar" class="panel orange">
@@ -62,7 +63,6 @@
     </div>
     <div style="display:none">
         <img id="mapSprites" src="mapSprites.svg">
-        <img id="mapTerrain" src="">
     </div>
   </body>
 </html>

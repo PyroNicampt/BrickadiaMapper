@@ -186,9 +186,44 @@ function mapNavigationSetup(){
 	
     mapContainer.addEventListener('pointerdown', touchDownHandler);
     mapContainer.addEventListener('wheel', scrollHandler);
+    mapContainer.addEventListener('contextmenu', e => {
+        touchCache = {};
+        touchCount = 0;
+    });
 
     document.getElementById('navZoomIn').addEventListener('click', e => {navButtonInput('zoomIn');});
     document.getElementById('navZoomOut').addEventListener('click', e => {navButtonInput('zoomOut');});
+
+    const navSkew = document.getElementById('navSkew');
+    const navSkewHandle = document.getElementById('navSkewHandle');
+    const setSkew = (x, y) => {
+        MapData.view.skewX = x * 10;
+        MapData.view.skewY = y * 10;
+        MapData.view.dirty = true;
+        navSkewHandle.style.transform = `translate(${x*navSkew.clientWidth*0.5}px, ${y*navSkew.clientHeight*0.5}px)`
+    };
+    const skewDownHandler = e => {
+        skewMoveHandler(e);
+        navSkew.addEventListener('pointermove', skewMoveHandler);
+
+        document.addEventListener('pointerup', skewUpHandler);
+        document.addEventListener('pointercancel', skewUpHandler);
+        //navSkew.addEventListener('pointerleave', skewUpHandler);
+    };
+    const skewUpHandler = e => {
+        navSkew.removeEventListener('pointermove', skewMoveHandler);
+
+        document.removeEventListener('pointerup', skewUpHandler);
+        document.removeEventListener('pointercancel', skewUpHandler);
+        //navSkew.removeEventListener('pointerleave', skewUpHandler);
+    };
+    const skewMoveHandler = e => {
+        let x = (e.offsetX / navSkew.clientWidth) * 2 - 1;
+        let y = (e.offsetY / navSkew.clientHeight) * 2 - 1;
+        setSkew(x, y);
+    };
+    navSkew.addEventListener('pointerdown', skewDownHandler);
+    navSkew.addEventListener('contextmenu', e => {e.preventDefault(); setSkew(0,0)});
     navUpdate();
 }
 
@@ -357,16 +392,32 @@ async function loadMapperData(file){
         }
     }
     if(mDat.chunks){
+        let minAlt = Infinity;
+        let maxAlt = -Infinity;
         for(let chunk of mDat.chunks){
-            MapData.addMarker({
+            let markerData = {
                 type: 'chunk',
                 position: {
                     y: (chunk.position.x * 2048 + 2048)/Config.coordScaleFac,
                     x: (chunk.position.y * 2048)/Config.coordScaleFac,
                     z: (chunk.position.z * 2048)/Config.coordScaleFac,
                 },
-                tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`,
-            });
+                tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`
+                    +`<hr><div>${chunk.brickCount} bricks</div>`
+                    +`<div>${chunk.componentCount} components</div>`
+                    +`<div>${chunk.wireCount} wires</div>`,
+                cullOffsetX: 1024 / Config.coordScaleFac,
+                cullOffsetY: 1024 / Config.coordScaleFac,
+            };
+            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(markerData.position.x * Config.coordScaleFac, 2)} ${(Utils.round(markerData.position.y * Config.coordScaleFac, 2))} ${Utils.round(markerData.position.z * Config.coordScaleFac, 2)} 0`;
+            minAlt = Math.min(markerData.position.z, minAlt);
+            maxAlt = Math.max(markerData.position.z, maxAlt);
+            MapData.addMarker(markerData);
+        }
+        for(let marker of MapData.markers){
+            if(marker.type == 'chunk'){
+                marker.color = Color.blendSrgb(new Color('#5ba3d377'), new Color('#cae6f977'), (marker.position.z - minAlt) / (maxAlt-minAlt)).hex;
+            }
         }
     }
     if(mDat.components){
@@ -435,13 +486,22 @@ function redrawMap(){
     let tempMeasure = {};
     //Draw Static Markers
     let markerCount = 0;
+    let markerX;
+    let markerY;
     for(const marker of MapData.markers){
         curSprite = null;
         marker.visible = false;
         if(marker.hidden || (marker.minZoom && MapData.view.scale < marker.minZoom) || (marker.maxZoom && MapData.view.scale > marker.maxZoom)) continue;
-        let markerX = MapData.view.convertX(marker.position.x);
-        let markerY = MapData.view.convertY(marker.position.y);
-        if(markerX > mapCanvas.width + Config.viewCullMargin || markerX < -Config.viewCullMargin || markerY > mapCanvas.height + Config.viewCullMargin || markerY < -Config.viewCullMargin) continue; // View Culling
+        markerX = MapData.view.convertX(marker.position.x, marker.position.z);
+        markerY = MapData.view.convertY(marker.position.y, marker.position.z);
+        if( markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.width + Config.viewCullMargin ||
+            markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin ||
+            markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.height + Config.viewCullMargin ||
+            markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin )
+                continue; // View Culling
+        if(!marker.tooltipPosition) marker.tooltipPosition = {};
+        marker.tooltipPosition.x = MapData.view.unconvertX(markerX);
+        marker.tooltipPosition.y = MapData.view.unconvertY(markerY);
         switch(marker.type){
             case 'entity':
                 if(!(MapData.layers.markers && MapData.layers.entities)) break;
@@ -467,7 +527,7 @@ function redrawMap(){
                     spriteSize,
                     spriteSize
                 );
-                mapctx.fillStyle = '#81bbe277';
+                mapctx.fillStyle = marker.color;
                 mapctx.fill();
                 if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
                 marker.tooltipHitzone.width = spriteSize;

@@ -251,11 +251,31 @@ button{
     display: flex;
     flex-direction: column;
     gap: 5px;
+    align-items: end;
     >*{
         font-size: 24px;
         font-weight: bold;
         width: var(--legendButtonSize);
         height: var(--legendButtonSize);
+    }
+}
+
+#navSkew{
+    width: calc(var(--legendButtonSize) * 2.0);
+    height: calc(var(--legendButtonSize) * 2.0);
+    cursor: move;
+}
+#navSkewHandle{
+    display: inline-block;
+    user-select: none;
+    pointer-events: none;
+    background: #f56a81;
+    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    >*{
+        display: inline-block;
+        transform:translate(-1px,-4px)
     }
 }
 
