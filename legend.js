@@ -147,7 +147,7 @@ export function initialize(){
     legendButtonEvent();
     if(document.body.clientWidth <= 700) legendButtonEvent();
     populateKey();
-    setLastUpdateData();
+    //setLastUpdateData();
 };
 
 function addSettingEntry(thisSetting, parent, indent=0){
