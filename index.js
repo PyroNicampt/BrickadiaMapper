@@ -10,15 +10,10 @@ import * as Legend from './legend.js';
 
 const mapContainer = document.getElementById('mapContainer');
 const mapCanvas = document.getElementById('mapCanvas');
-const dynCanvas = document.getElementById('dynCanvas');
 /** The main map drawing context.
  * @type {CanvasRenderingContext2D} */
 const mapctx = mapCanvas.getContext('2d');
-/** The dynamic map drawing context.
- * @type {CanvasRenderingContext2D} */
-const dynctx = dynCanvas.getContext('2d');
 const mapSprites = document.getElementById('mapSprites');
-const mapTerrain = document.getElementById('mapTerrain');
 const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
 const markerCountDisplay = document.getElementById('markerCountDisplay');
 const warningPanel = document.getElementById('warningPanel');
@@ -511,10 +506,24 @@ function redrawMap(){
                 if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
                 marker.visible = true;
                 markerCount++;
-                if(marker.frozen) curSprite = Config.spriteBounds.entity_frozen;
-                else if(marker.sleeping) curSprite = Config.spriteBounds.entity_asleep;
-                else curSprite = Config.spriteBounds.entity_awake;
-                spriteSize = 12;
+                spriteSize = 5;
+                if(marker.frozen) mapctx.fillStyle = '#80ff2cff';
+                else if(marker.sleeping) mapctx.fillStyle = '#2c7affff';
+                else mapctx.fillStyle = '#ff2c2cff';
+                mapctx.strokeStyle = '#000f';
+                mapctx.lineWidth = 2.0;
+                mapctx.beginPath();
+                mapctx.arc(
+                    markerX,
+                    markerY,
+                    spriteSize,
+                    0,
+                    2 * Math.PI
+                );
+                mapctx.stroke();
+                mapctx.fill();
+                if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
+                marker.tooltipHitzone.radius = spriteSize;
                 break;
             case 'chunk':
                 if(!(MapData.layers.brickedchunks)) break;
