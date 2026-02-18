@@ -150,7 +150,7 @@ export function initialize(){
     //setLastUpdateData();
 };
 
-function addSettingEntry(thisSetting, parent, indent=0){
+function addSettingEntry(thisSetting, parentElement, indent=0){
     thisSetting.divContainer = document.createElement('div');
     thisSetting.labelElement = document.createElement('label');
     thisSetting.divContainer.appendChild(thisSetting.labelElement);
@@ -158,6 +158,17 @@ function addSettingEntry(thisSetting, parent, indent=0){
     thisSetting.settingType = thisSetting.id.split('_')[0];
     thisSetting.default = thisSetting.state;
     if(thisSetting.saveState) thisSetting.state = loadSetting(thisSetting.id, thisSetting.state);
+
+    if(thisSetting.parent){
+        let currentAncestor = thisSetting.parent;
+        let visible = true;
+        while(currentAncestor){
+            if(currentAncestor.settingType == 'toggle') visible &&= currentAncestor.inputElement.checked;
+            currentAncestor = currentAncestor.parent;
+        }
+        thisSetting.divContainer.style.display = visible ? '' : 'none';
+    }
+
     switch(thisSetting.settingType){
         case 'toggle':
             thisSetting.inputElement = document.createElement('input');
@@ -169,9 +180,17 @@ function addSettingEntry(thisSetting, parent, indent=0){
                     thisSetting.func(e.target.checked);
                     if(thisSetting.saveState) saveSetting(thisSetting.id, e.target.checked);
                     if(thisSetting.children){
-                        for(const child of thisSetting.children){
-                            document.getElementById(child.id).parentElement.style.display = e.target.checked ? '' : 'none';
+                        let recursiveDisplay = (children, enable) => {
+                            for(const child of children){
+                                child.divContainer.style.display = enable ? '' : 'none';
+                                if(child.children){
+                                    let enableChildren = enable;
+                                    if(child.settingType == 'toggle') enableChildren = enableChildren && child.inputElement.checked;
+                                    recursiveDisplay(child.children, enableChildren);
+                                }
+                            }
                         }
+                        recursiveDisplay(thisSetting.children, e.target.checked);
                     }
                 });
                 thisSetting.func(thisSetting.state);
@@ -255,7 +274,7 @@ function addSettingEntry(thisSetting, parent, indent=0){
             thisSetting.divContainer.remove();
             return;
     }
-    parent.appendChild(thisSetting.divContainer);
+    parentElement.appendChild(thisSetting.divContainer);
     if(thisSetting.settingType != 'button'){
         thisSetting.labelElement.innerHTML = thisSetting.label;
         thisSetting.labelElement.htmlFor = thisSetting.id;
@@ -277,7 +296,8 @@ function addSettingEntry(thisSetting, parent, indent=0){
 
     if(thisSetting.children){
         for(let child of thisSetting.children){
-            addSettingEntry(child, parent, indent+1);
+            child.parent = thisSetting;
+            addSettingEntry(child, parentElement, indent+1, thisSetting);
         }
     }
 }
