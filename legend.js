@@ -18,6 +18,24 @@ let settingEntries = [
         }
     },
     {
+        label: 'Owner Filter',
+        id: 'field_ownerFilter',
+        saveState: false,
+        state: '',
+        placeholder: 'Name/Regex/UUID',
+        func: state => {
+            let regMatch = /^\/(?<expression>.+)\/(?<flags>[dgimsuvy]*)$/.exec(state);
+            if(regMatch){
+                try{
+                    MapData.setSearchFilter(RegExp(regMatch.groups.expression, regMatch.groups.flags));
+                }catch(e){}
+            }else{
+                MapData.setSearchFilter(state);
+            }
+            MapData.view.dirty = true;
+        }
+    },
+    {
         label: 'Markers',
         id: 'toggle_markers',
         saveState: true,
@@ -78,6 +96,98 @@ let settingEntries = [
                     MapData.layers.components = state;
                     MapData.view.dirty = true;
                 },
+                children:[
+                    {
+                        label: 'Buffers',
+                        id: 'toggle_component_buffers',
+                        saveState: true,
+                        state: true,
+                        func: state =>{
+                            MapData.layers.component_buffers = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Lights',
+                        id: 'toggle_component_lights',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_lights = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Teleports',
+                        id: 'toggle_component_teleports',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_teleports = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Sounds',
+                        id: 'toggle_component_sounds',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_sounds = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Bots',
+                        id: 'toggle_component_bots',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_bots = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Weights',
+                        id: 'toggle_component_weights',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_weights = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Velocity',
+                        id: 'toggle_component_velocities',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_velocities = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Gravity',
+                        id: 'toggle_component_gravities',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_gravities = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Other',
+                        id: 'toggle_component_others',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_others = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                ]
             },
         ],
     },
@@ -95,27 +205,9 @@ let settingEntries = [
         label: 'Username',
         id: 'field_username',
         saveState: true,
-        state: 'Your Name Here',
-        placeholder: 'Your Name Here',
-    },
-    {
-        label: 'Owner Filter',
-        id: 'field_ownerFilter',
-        saveState: false,
         state: '',
-        placeholder: 'Name/Regex/UUID',
-        func: state => {
-            let regMatch = /^\/(?<expression>.+)\/(?<flags>[dgimsuvy]*)$/.exec(state);
-            if(regMatch){
-                try{
-                    MapData.setSearchFilter(RegExp(regMatch.groups.expression, regMatch.groups.flags));
-                }catch(e){}
-            }else{
-                MapData.setSearchFilter(state);
-            }
-            MapData.view.dirty = true;
-        }
-    }
+        placeholder: 'Your Username Here',
+    },
 ];
 
 const legendKey = document.getElementById('legendKey');
@@ -399,25 +491,11 @@ function populateKey(){
     addKeyEntry('entity_awake', 'Awake Entity');
     addKeyEntry('entity_asleep', 'Sleeping Entity');
     addKeyEntry('entity_frozen', 'Frozen Entity');
-    /*
-    addKeyEntry('gradeArrow', 'Grade Indication')
-    addKeyEntry('speed_5', 'Speed Limit');
-    addKeyEntry('junction', 'Junction/Switch');
-    addKeyEntry('office', 'Station Office');
-    addKeyEntry('shop', 'Shop');
-    addKeyEntry('service_repair', 'Repair Service');
-    addKeyEntry('service_diesel', 'Diesel Refuel');
-    addKeyEntry('service_charger', 'Electric Charger');
-    addKeyEntry('coal', 'Coal Tower');
-    addKeyEntry('water', 'Water Tower');
-    addKeyEntry('landmark', 'Landmark');
-    addKeyEntry('garage', 'Garage');
-    addKeyEntry('demonstrator', 'Demonstrator Spawn');
-    addKeyEntry('player', 'Player');*/
-    //Add empty entries to make entries align right in the columns.
-    /*for(let i=0; i<1; i++){
-        addKeyEntry();
-    }*/
+    addKeyEntry();
+    addKeyEntry('impact_none', 'Minimal Impact');
+    addKeyEntry('impact_low', 'Low Impact');
+    addKeyEntry('impact_med', 'Mild Impact');
+    addKeyEntry('impact_high', 'Higher Impact');
 }
 
 /**

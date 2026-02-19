@@ -124,7 +124,7 @@ function markerSortFunction(a, b){
                 if(!b.frozen) return -1;
             }
         }else if(a.type == 'component'){
-            if(a.componentActive != b.componentActive) return a.componentActive - b.componentActive;
+            if(a.componentImpact != b.componentImpact) return a.componentImpact - b.componentImpact;
         }
     }
     return a.position.z - b.position.z;

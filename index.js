@@ -296,7 +296,7 @@ async function loadMapperData(file){
 
 
     const formatVec = (vec, decimals = 1) => {
-        return `(${Utils.round(vec.x, decimals)}, ${Utils.round(vec.y, decimals)}, ${Utils.round(vec.z, decimals)})`;
+        return `(${Utils.round(vec.x ?? vec.X ?? vec.Pitch, decimals)}, ${Utils.round(vec.y ?? vec.Y ?? vec.Yaw, decimals)}, ${Utils.round(vec.z ?? vec.Z ?? vec.Roll, decimals)}${(vec.w ?? vec.W) ? `, ${Utils.round(vec.w ?? vec.W, decimals)}` : ''})`;
     }
     if(mDat.entities){
         for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
@@ -403,6 +403,7 @@ async function loadMapperData(file){
                     +`<div>${chunk.wireCount} wires</div>`,
                 cullOffsetX: 1024 / Config.coordScaleFac,
                 cullOffsetY: 1024 / Config.coordScaleFac,
+                maxZoom: 12,
             };
             markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(markerData.position.x * Config.coordScaleFac, 2)} ${(Utils.round(markerData.position.y * Config.coordScaleFac, 2))} ${Utils.round(markerData.position.z * Config.coordScaleFac, 2)} 0`;
             minAlt = Math.min(markerData.position.z, minAlt);
@@ -411,7 +412,7 @@ async function loadMapperData(file){
         }
         for(let marker of MapData.markers){
             if(marker.type == 'chunk'){
-                marker.color = Color.blendSrgb(new Color('#5ba3d377'), new Color('#cae6f977'), (marker.position.z - minAlt) / (maxAlt-minAlt)).hex;
+                marker.color = Color.blendSrgb(new Color(Config.colors.chunk_low), new Color(Config.colors.chunk_high), (marker.position.z - minAlt) / (maxAlt-minAlt)).hex;
             }
         }
     }
@@ -429,31 +430,17 @@ async function loadMapperData(file){
                     userName: mDat.owners.UserNames[component.owner],
                     userId: mDat.owners.UserIds[component.owner],
                 },
-                minZoom: 0.1,
+                componentImpact: 1,
             };
-            if(component.Input != component.Output){
-                if((component.name == 'BrickComponentType_WireGraphPseudo_BufferSeconds'
-                    && component.SecondsToWait < 0.1
-                    && component.ZeroSecondsToWait < 0.1)
-                    ||
-                    (component.name == 'BrickComponentType_WireGraphPseudo_BufferTicks')
-                    && component.TicksToWait < 10
-                    && component.ZeroTicksToWait < 10
-                    ){
-                    markerData.componentActive = 2;
-                    markerData.color = '#f7004aee';
-                }else{
-                    markerData.componentActive = 1;
-                    markerData.color = '#f4ae35dd';
-                }
-            }else{
-                markerData.componentActive = 0;
-                markerData.color = '#81e883cc';
-            }
 
             let instanceInfo = '';
             for(let property in component){
                 if(!['name', 'class', 'position', 'owner', 'grid'].includes(property)){
+                    if(typeof(component[property]) == 'object'){
+                        if((component[property].X != null && component[property].Y != null && component[property].Z != null) || (component[property].Pitch != null && component[property].Yaw != null && component[property].Roll != null)){
+                            component[property] = formatVec(component[property], 2);
+                        }
+                    }
                     instanceInfo += `<div><b>${property}:</b> ${component[property]}</div>`;
                 }
             }
@@ -463,6 +450,74 @@ async function loadMapperData(file){
                 + instanceInfo
                 + `<div><b>Position:</b> ${formatVec(component.position, 2)}</div>`
             ;
+            switch(component.name){
+                case 'BrickComponentType_WireGraphPseudo_BufferTicks':
+                case 'BrickComponentType_WireGraphPseudo_BufferSeconds':
+                    markerData.componentCategory = 'buffers';
+                    if(component.Input != component.Output){
+                        if((component.name == 'BrickComponentType_WireGraphPseudo_BufferSeconds'
+                            && component.SecondsToWait < 0.1
+                            && component.ZeroSecondsToWait < 0.1)
+                            ||
+                            (component.name == 'BrickComponentType_WireGraphPseudo_BufferTicks')
+                            && component.TicksToWait < 10
+                            && component.ZeroTicksToWait < 10
+                            ){
+                            markerData.componentImpact = 3;
+                        }else{
+                            markerData.componentImpact = 2;
+                        }
+                    }else{
+                        markerData.componentImpact = 1;
+                    }
+                    break;
+                case 'Component_PointLight':
+                case 'Component_SpotLight':
+                    markerData.componentCategory = 'lights';
+                    if(!component.bEnabled) markerData.componentImpact = 0;
+                    else if(component.bCastShadows) markerData.componentImpact = 3;
+                    else if(component.radius > 400) markerData.componentImpact = 2;
+                    break;
+                case 'BrickComponentType_Internal_TeleportDestination':
+                    markerData.componentImpact = 0;
+                    // fallthrough
+                case 'BrickComponentType_WireGraph_Exec_Entity_Teleport':
+                case 'BrickComponentType_WireGraph_Exec_Entity_RelativeTeleport':
+                case 'BrickComponentType_WireGraph_Exec_Entity_SetRotation':
+                case 'BrickComponentType_WireGraph_Exec_Entity_SetLocationRotation':
+                case 'BrickComponentType_WireGraph_Exec_Entity_SetLocation':
+                case 'BrickComponentType_WireGraph_Exec_Entity_AddLocationRotation':
+                    markerData.componentCategory = 'teleports';
+                    break;
+                case 'Component_WireGraph_PlayAudioAt':
+                case 'Component_OneShotAudioEmitter':
+                case 'Component_AudioEmitter':
+                    markerData.componentCategory = 'sounds';
+                    if(component.bEnabled) markerData.componentImpact = 1;
+                    else markerData.componentImpact = 0;
+                    break;
+                case 'Component_BotSpawn':
+                    markerData.componentCategory = 'bots';
+                    if(component.bSpawnEnable){
+                        if(component.bActiveBot) markerData.componentImpact = 3;
+                        else markerData.componentImpact = 2;
+                    }else markerData.componentImpact = 1;
+                    break;
+                case 'Component_Internal_WheelEngine':
+                case 'Component_Internal_WeightBrick':
+                    markerData.componentCategory = 'weights';
+                    break;
+                case 'BrickComponentType_WireGraph_Exec_Entity_AddVelocity':
+                case 'BrickComponentType_WireGraph_Exec_Entity_SetVelocity':
+                    markerData.componentCategory = 'velocities';
+                    break;
+                case 'BrickComponentType_WireGraph_Exec_Entity_SetGravityDirection':
+                    markerData.componentCategory = 'gravities';
+                    break;
+                default:
+                    markerData.componentCategory = 'others';
+                    break;
+            }
             markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(component.position.x, 2)} ${(Utils.round(component.position.y, 2))} ${Utils.round(component.position.z, 2)} 0`;
             MapData.addMarker(markerData);
         }
@@ -507,10 +562,10 @@ function redrawMap(){
                 marker.visible = true;
                 markerCount++;
                 spriteSize = 5;
-                if(marker.frozen) mapctx.fillStyle = '#80ff2cff';
-                else if(marker.sleeping) mapctx.fillStyle = '#2c7affff';
-                else mapctx.fillStyle = '#ff2c2cff';
-                mapctx.strokeStyle = '#000f';
+                if(marker.frozen) mapctx.fillStyle = Config.colors.entity_frozen;
+                else if(marker.sleeping) mapctx.fillStyle = Config.colors.entity_asleep;
+                else mapctx.fillStyle = Config.colors.entity_awake;
+                mapctx.strokeStyle = Config.colors.outline;
                 mapctx.lineWidth = 2.0;
                 mapctx.beginPath();
                 mapctx.arc(
@@ -546,6 +601,7 @@ function redrawMap(){
                 break;
             case 'component':
                 if(!(MapData.layers.components)) break;
+                if(!MapData.layers['component_'+marker.componentCategory]) break;
                 if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
                 marker.visible = true;
                 markerCount++;
@@ -557,8 +613,11 @@ function redrawMap(){
                     spriteSize,
                     spriteSize
                 );
-                mapctx.fillStyle = marker.color ?? '#000000aa';
-                mapctx.strokeStyle = '#000f';
+                if(marker.componentImpact == 3) mapctx.fillStyle = Config.colors.impact_high;
+                else if(marker.componentImpact == 2) mapctx.fillStyle = Config.colors.impact_med;
+                else if(marker.componentImpact == 0) mapctx.fillStyle = Config.colors.impact_none;
+                else mapctx.fillStyle = Config.colors.impact_low;
+                mapctx.strokeStyle = Config.colors.outline;
                 mapctx.lineWidth = 1.0;
                 mapctx.stroke();
                 mapctx.fill();
