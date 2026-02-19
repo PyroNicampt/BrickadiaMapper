@@ -410,6 +410,7 @@ async function loadMapperData(file){
             maxAlt = Math.max(markerData.position.z, maxAlt);
             MapData.addMarker(markerData);
         }
+        if(maxAlt == minAlt) maxAlt += 1;
         for(let marker of MapData.markers){
             if(marker.type == 'chunk'){
                 marker.color = Color.blendSrgb(new Color(Config.colors.chunk_low), new Color(Config.colors.chunk_high), (marker.position.z - minAlt) / (maxAlt-minAlt)).hex;
@@ -439,6 +440,8 @@ async function loadMapperData(file){
                     if(typeof(component[property]) == 'object'){
                         if((component[property].X != null && component[property].Y != null && component[property].Z != null) || (component[property].Pitch != null && component[property].Yaw != null && component[property].Roll != null)){
                             component[property] = formatVec(component[property], 2);
+                        }else{
+                            component[property] = JSON.stringify(component[property]);
                         }
                     }
                     instanceInfo += `<div><b>${property}:</b> ${component[property]}</div>`;
@@ -475,8 +478,9 @@ async function loadMapperData(file){
                 case 'Component_SpotLight':
                     markerData.componentCategory = 'lights';
                     if(!component.bEnabled) markerData.componentImpact = 0;
-                    else if(component.bCastShadows) markerData.componentImpact = 3;
-                    else if(component.radius > 400) markerData.componentImpact = 2;
+                    else if((component.bCastShadows && component.Radius > 100) || component.Radius > 6000 || component.Brightness > 6000) markerData.componentImpact = 3;
+                    else if(component.bCastShadows || component.Radius > 400 || component.Radius < 0 || component.Brightness < 0 || component.Brightness > 400) markerData.componentImpact = 2;
+                    markerData.componentRadius = component.Radius;
                     break;
                 case 'BrickComponentType_Internal_TeleportDestination':
                     markerData.componentImpact = 0;
@@ -495,6 +499,8 @@ async function loadMapperData(file){
                     markerData.componentCategory = 'sounds';
                     if(component.bEnabled) markerData.componentImpact = 1;
                     else markerData.componentImpact = 0;
+                    if(component.name != 'Component_WireGraph_PlayAudioAt')
+                        markerData.componentRadius = component.MaxDistance;
                     break;
                 case 'Component_BotSpawn':
                     markerData.componentCategory = 'bots';
@@ -583,7 +589,7 @@ function redrawMap(){
             case 'chunk':
                 if(!(MapData.layers.brickedchunks)) break;
                 marker.visible = true;
-                spriteSize = 20.48 * MapData.view.scale;
+                spriteSize = (2048 / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
                 mapctx.beginPath();
                 mapctx.rect(
                     markerX,
@@ -603,9 +609,37 @@ function redrawMap(){
                 if(!(MapData.layers.components)) break;
                 if(!MapData.layers['component_'+marker.componentCategory]) break;
                 if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
+                if(    marker.componentImpact == 0 && !(MapData.layers.impact_mask & 1)
+                    || marker.componentImpact == 1 && !(MapData.layers.impact_mask & 2)
+                    || marker.componentImpact == 2 && !(MapData.layers.impact_mask & 4)
+                    || marker.componentImpact == 3 && !(MapData.layers.impact_mask & 8)
+                ) break;
                 marker.visible = true;
                 markerCount++;
                 spriteSize = Math.max(10, 0.10 * MapData.view.scale);
+                if(MapData.layers.renderradii && marker.componentRadius && (
+                       marker.componentImpact == 0 && MapData.layers.radius_impact_mask & 1
+                    || marker.componentImpact == 1 && MapData.layers.radius_impact_mask & 2
+                    || marker.componentImpact == 2 && MapData.layers.radius_impact_mask & 4
+                    || marker.componentImpact == 3 && MapData.layers.radius_impact_mask & 8
+                )){
+                    mapctx.beginPath();
+                    mapctx.moveTo(markerX, markerY);
+                    mapctx.arc(
+                        markerX,
+                        markerY,
+                        (Math.abs(marker.componentRadius) / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio,
+                        1,
+                        3 * Math.PI
+                    );
+                    mapctx.strokeStyle = marker.componentRadius > 0 ? Config.colors.radius : Config.colors.radius_negative;
+                    if(marker.componentImpact == 3) mapctx.lineWidth = 1.5;
+                    else if(marker.componentImpact == 2) mapctx.lineWidth = 1.0;
+                    else if(marker.componentImpact == 1) mapctx.lineWidth = 0.5;
+                    else mapctx.lineWidth = 0.3;
+                    mapctx.setLineDash([20, 5]);
+                    mapctx.stroke();
+                }
                 mapctx.beginPath();
                 mapctx.rect(
                     markerX - 0.5 * spriteSize,

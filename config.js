@@ -33,6 +33,8 @@ export const colors = {
     impact_low: '#81e883cc',
     impact_med: '#f4ae35dd',
     impact_high: '#f7004aee',
+    radius: '#333388',
+    radius_negative: '#ff3388',
 }
 
 export const spriteBounds = {

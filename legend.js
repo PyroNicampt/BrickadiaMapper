@@ -98,6 +98,26 @@ let settingEntries = [
                 },
                 children:[
                     {
+                        label: 'Filter By Impact',
+                        id: 'dropdown_component_impact',
+                        saveState: true,
+                        state: 15,
+                        options: [
+                            [15, 'All'],
+                            [8, 'Highest'],
+                            [12, 'Medium or greater'],
+                            [14, 'Low or greater'],
+                            [4, 'Medium Only'],
+                            [2, 'Low only'],
+                            [1, 'Lowest only'],
+                        ],
+                        func: state =>{
+                            state = Number(state);
+                            MapData.layers.impact_mask = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
                         label: 'Buffers',
                         id: 'toggle_component_buffers',
                         saveState: true,
@@ -190,6 +210,38 @@ let settingEntries = [
                 ]
             },
         ],
+    },
+    {
+        label: 'Radii',
+        id: 'toggle_renderradii',
+        saveState: true,
+        state: true,
+        func: state => {
+            MapData.layers.renderradii = state;
+            MapData.view.dirty = true;
+        },
+        children:[
+            {
+                label: 'Filter By Impact',
+                id: 'dropdown_radii_impact',
+                saveState: true,
+                state: 12,
+                options: [
+                    [15, 'All'],
+                    [8, 'Highest'],
+                    [12, 'Medium or greater'],
+                    [14, 'Low or greater'],
+                    [4, 'Medium Only'],
+                    [2, 'Low only'],
+                    [1, 'Lowest only'],
+                ],
+                func: state =>{
+                    state = Number(state);
+                    MapData.layers.radius_impact_mask = state;
+                    MapData.view.dirty = true;
+                }
+            },
+        ]
     },
     {
         label: 'Occupied Chunks',
@@ -302,6 +354,7 @@ function addSettingEntry(thisSetting, parentElement, indent=0){
                 if(inputEntry == thisSetting.state) optionElement.selected = true;
                 thisSetting.inputElement.appendChild(optionElement);
             }
+            if(thisSetting.state) thisSetting.inputElement.value = thisSetting.state;
             if(thisSetting.func){
                 thisSetting.inputElement.addEventListener('change', e =>{
                     thisSetting.func(e.target.value);
@@ -316,6 +369,7 @@ function addSettingEntry(thisSetting, parentElement, indent=0){
             thisSetting.inputElement.min = thisSetting.min ?? 0;
             thisSetting.inputElement.max = thisSetting.max ?? 100;
             thisSetting.inputElement.step = thisSetting.step ?? 1;
+            thisSetting.inputElement.value = thisSetting.state ?? 0;
             if(thisSetting.func){
                 thisSetting.inputElement.addEventListener('input', e => {
                     thisSetting.func(e.target.value);
