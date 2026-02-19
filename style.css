@@ -102,6 +102,19 @@ a:hover{
     }
 }
 
+.hidey{
+    max-height: 50px;
+    overflow: hidden;
+    mask: linear-gradient(#000f 10%, #0000 90%);
+    transition: all 1s;
+}
+
+.hidey:hover{
+    max-height: unset;
+    mask: unset;
+}
+
+
 #topleft{
     position:fixed;
     top: 0px;

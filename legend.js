@@ -291,7 +291,7 @@ export function initialize(){
     legendButtonEvent();
     if(document.body.clientWidth <= 700) legendButtonEvent();
     populateKey();
-    //setLastUpdateData();
+    setLastUpdateData();
 };
 
 function addSettingEntry(thisSetting, parentElement, indent=0){
@@ -520,15 +520,18 @@ function autocast(value){
 
 let pageLoadUpdateDate = null;
 async function setLastUpdateData(){
-    if(!window.location.host.includes('github')) return;
-    let commits = await (await fetch(new Request('https://api.github.com/repos/PyroNicampt/DV-Community-Map/commits'))).json();
+    if(!window.location.host.includes('github')){
+        document.getElementById('lastUpdate').parentElement.style.display = 'none';
+        return;
+    }
+    let commits = await (await fetch(new Request('https://api.github.com/repos/PyroNicampt/BrickadiaMapper/commits'))).json();
     let lastUpdateElement = document.getElementById('lastUpdate');
     if(!commits){
-        lastUpdateElement.innerHTML = '<a href="https://github.com/PyroNicampt/DV-Community-Map/commits/main/" title="Could not fetch commit history">Fetch Error</a>';
+        lastUpdateElement.innerHTML = '<a href="https://github.com/PyroNicampt/BrickadiaMapper/commits/main/" title="Could not fetch commit history">Fetch Error</a>';
         return;
     };
     let updateDate = new Date(commits[0].commit.author.date);
-    lastUpdateElement.innerHTML = `<a href="https://github.com/PyroNicampt/DV-Community-Map/commits/main/" title="${updateDate.toString()}">${Utils.formattedTimeBetweenDates(new Date(), updateDate)} ${new Date() >= updateDate ? 'ago' : 'from now'}</a>`;
+    lastUpdateElement.innerHTML = `<a href="https://github.com/PyroNicampt/BrickadiaMapper/commits/main/" title="${updateDate.toString()}">${Utils.formattedTimeBetweenDates(new Date(), updateDate)} ${new Date() >= updateDate ? 'ago' : 'from now'}</a>`;
     document.getElementById('changelog').innerHTML = commits[0].commit.message.replaceAll(/\n+/g, '\n').replaceAll('\n','<br>');
     if(pageLoadUpdateDate == null){
         pageLoadUpdateDate = updateDate;
