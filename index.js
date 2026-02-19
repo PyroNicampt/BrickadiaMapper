@@ -440,7 +440,7 @@ async function loadMapperData(file){
                     if(typeof(component[property]) == 'object'){
                         if((component[property].X != null && component[property].Y != null && component[property].Z != null) || (component[property].Pitch != null && component[property].Yaw != null && component[property].Roll != null)){
                             component[property] = formatVec(component[property], 2);
-                        }else{
+                        }else if(!(property == 'Skin' && component.name == 'Component_BotSpawn')){
                             component[property] = JSON.stringify(component[property]);
                         }
                     }
