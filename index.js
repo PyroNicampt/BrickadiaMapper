@@ -229,6 +229,10 @@ function tooltipSetup(){
     let tooltipY = 0;
     let tooltipDirty = false;
     let removeTooltip = false;
+    let freezeTooltip = false;
+    let tooltipActive = false;
+    let mouseOverTooltip = false;
+    let prevTooltipContents;
 
     mapContainer.addEventListener('mousemove', event => {
         tooltipX = event.clientX;
@@ -242,34 +246,66 @@ function tooltipSetup(){
     });
 
     document.addEventListener('copy', event => {
-        if(MapData.tooltipClipboard){
-            if(typeof(MapData.tooltipClipboard) == 'function'){
-                event.clipboardData.setData('text/plain', MapData.tooltipClipboard());
+        let newClipboard = Utils.customClipboard ?? MapData.tooltipClipboard;
+        if(newClipboard){
+            if(typeof(newClipboard) == 'function'){
+                event.clipboardData.setData('text/plain', newClipboard());
             }else{
-                event.clipboardData.setData('text/plain', MapData.tooltipClipboard);
+                event.clipboardData.setData('text/plain', newClipboard);
             }
             event.preventDefault();
         }
+    });
+
+    document.addEventListener('keydown', e => {
+        if(e.key == 'Control'){
+            freezeTooltip = true;
+            tooltip.style.pointerEvents = 'auto';
+        }
+    });
+    document.addEventListener('keyup', e => {
+        if(e.key == 'Control'){
+            freezeTooltip = false;
+            tooltipDirty = true;
+            if(!mouseOverTooltip) tooltip.style.pointerEvents = 'none';
+        }
+    });
+    tooltip.addEventListener('mouseenter', e => {
+        if(freezeTooltip) mouseOverTooltip = true;
+    });
+    tooltip.addEventListener('mouseleave', e => {
+        mouseOverTooltip = false;
+        if(!freezeTooltip) tooltip.style.pointerEvents = 'none';
     });
 
     const tooltipUpdate = ts => {
         if(ts && tooltipDirty){
             let tooltipContents = MapData.testTooltip(tooltipX, tooltipY);
             if(tooltipContents != '' && !removeTooltip && !isNavigating){
-                tooltip.innerHTML = tooltipContents.replaceAll('\n','<br>');
-                let tooltipWidth = tooltip.clientWidth;
-                let tooltipHeight = tooltip.clientHeight;
-                tooltipX += 5;
-                tooltipY += 5;
-                if(tooltipWidth+tooltipX + 10 > mapContainer.clientWidth)
-                    tooltipX -= tooltipWidth + 15;
-                if(tooltipHeight+tooltipY + 10 > mapContainer.clientHeight)
-                    tooltipY -= tooltipHeight + 10;
-                tooltip.style.transform = `translate(${tooltipX}px, ${tooltipY}px)`;
-                tooltip.style.display = '';
-                mapCanvas.style.cursor = 'crosshair';
+                if(!(freezeTooltip || mouseOverTooltip) || !tooltipActive){
+                    if(tooltipContents != prevTooltipContents){
+                        tooltip.innerHTML = tooltipContents.replaceAll('\n','<br>');
+                        Utils.attachClipboardHooks(tooltip);
+                        prevTooltipContents = tooltipContents;
+                    }
+                    let tooltipWidth = tooltip.clientWidth;
+                    let tooltipHeight = tooltip.clientHeight;
+                    tooltipX += 5;
+                    tooltipY += 5;
+                    if(tooltipWidth+tooltipX + 10 > mapContainer.clientWidth)
+                        tooltipX -= tooltipWidth + 15;
+                    if(tooltipHeight+tooltipY + 10 > mapContainer.clientHeight)
+                        tooltipY -= tooltipHeight + 10;
+                    tooltip.style.transform = `translate(${tooltipX}px, ${tooltipY}px)`;
+                    tooltip.style.display = '';
+                    mapCanvas.style.cursor = 'crosshair';
+                    tooltipActive = true;
+                }
             }else{
-                tooltip.style.display = 'none';
+                if(!(freezeTooltip || mouseOverTooltip)){
+                    tooltip.style.display = 'none';
+                    tooltipActive = false;
+                }
                 mapCanvas.style.cursor = '';
             }
             isNavigating = false;

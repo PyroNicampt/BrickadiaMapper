@@ -3,6 +3,8 @@
 import * as Config from './../config.js';
 import {SpriteBounds} from './spritelib.js';
 
+export let customClipboard;
+
 export function randomRange(min=0.0, max=1.0){
     return Math.random()*(max-min) + min;
 }
@@ -97,4 +99,26 @@ const cardinalDirections = [
 ]
 export function angleToCardinalDirection(angle){
     return cardinalDirections[Math.floor(mod(angle/(2*Math.PI) + (0.5/cardinalDirections.length), 1)*cardinalDirections.length)];
+}
+
+/**
+ * Check for data-clipboard attributes on an element and its children, then attach an event handler for clicking them to copy that to clipboard.
+ * @param {HTMLElement} element 
+ */
+export function attachClipboardHooks(element){
+    let hookList = element.querySelectorAll('[data-clipboard]');
+    if(element.dataset.clipboard) hookList.push(element);
+
+    for(let hookTarget of hookList){
+        if(!hookTarget.title) hookTarget.title = 'Ctrl+C to copy special';
+        hookTarget.style.cursor = 'copy';
+        hookTarget.addEventListener('mouseenter', e => {
+            customClipboard = hookTarget.dataset.clipboard;
+        });
+        hookTarget.addEventListener('mouseleave', e => {
+            if(customClipboard == hookTarget.dataset.clipboard) customClipboard = null;
+        });
+        element.removeAttribute('data-clipboard');
+    }
+}
 }
