@@ -182,7 +182,7 @@ function mapNavigationSetup(){
     mapContainer.addEventListener('pointerdown', touchDownHandler);
     mapContainer.addEventListener('wheel', scrollHandler);
     mapContainer.addEventListener('contextmenu', e => {
-        touchCache = {};
+        touchCache = [];
         touchCount = 0;
     });
 
@@ -334,6 +334,29 @@ async function loadMapperData(file){
     const formatVec = (vec, decimals = 1) => {
         return `(${Utils.round(vec.x ?? vec.X ?? vec.Pitch, decimals)}, ${Utils.round(vec.y ?? vec.Y ?? vec.Yaw, decimals)}, ${Utils.round(vec.z ?? vec.Z ?? vec.Roll, decimals)}${(vec.w ?? vec.W) ? `, ${Utils.round(vec.w ?? vec.W, decimals)}` : ''})`;
     }
+    const formatProperties = (object, ignoreList) => {
+        let finalProperty;
+        let result = '';
+        for(let property in object){
+            if(!ignoreList.includes(property)){
+                if(typeof(object[property]) == 'object'){
+                    if((object[property].X != null && object[property].Y != null && object[property].Z != null) || (object[property].Pitch != null && object[property].Yaw != null && object[property].Roll != null)){
+                        object[property] = formatVec(object[property], 2);
+                    }else{
+                        object[property] = JSON.stringify(object[property], null, 2);
+                    }
+                }
+                if(typeof(object[property]) == 'string') finalProperty = object[property].replaceAll(/[\n\r\s]+/gm, ' ');
+                if(typeof(object[property]) == 'string' && object[property].length > Config.maxPropertyStringLength){
+                    finalProperty = `<span title="Ctrl+C to copy full contents" class="orange" data-clipboard="${encodeURIComponent(object[property])}">${Utils.sanitize(finalProperty.substring(0,Config.maxPropertyStringLength))}...</span>`;
+                }
+                else
+                    finalProperty = Utils.sanitize(object[property]);
+                result += `<div><b>${property}:</b> ${finalProperty}</div>`;
+            }
+        }
+        return result;
+    }
     if(mDat.entities){
         for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
             let ownerIndex = mDat.entities.OwnerIndices[i];
@@ -381,11 +404,7 @@ async function loadMapperData(file){
             let instanceInfo = '';
             if(mDat.entities.instances){
                 instanceInfo += `<div><b>Type:</b> ${mDat.entities.instances[i].name.replaceAll(/^Entity_/g, '')}</div>`;
-                for(let property in mDat.entities.instances[i]){
-                    if(property != 'name' && property != 'class'){
-                        instanceInfo += `<div><b>${property}:</b> ${mDat.entities.instances[i][property]}</div>`;
-                    }
-                }
+                instanceInfo += formatProperties(mDat.entities.instances[i], ['name', 'class']);
                 if(mDat.entities.instances[i].class == 'BrickGridDynamicActor'){
                     delete markerData.colors;
                 }
@@ -404,7 +423,7 @@ async function loadMapperData(file){
                 else physState = 'Awake';
             }
             markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
-                + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
+                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (${Utils.sanitize(markerData.owner.userName)}) <span class="smol quiet"><a href="https://www.brickadia.com/users/${markerData.owner.userId}">${markerData.owner.userId}</a></span></div>`
                 + instanceInfo
                 + `<div><b>Position:</b> ${formatVec(truePosition, 2)}</div>`
                 + `<div><b>Velocity:</b> ${formatVec(markerData.velocity, 3)}</div>`
@@ -471,22 +490,11 @@ async function loadMapperData(file){
             };
 
             let instanceInfo = '';
-            for(let property in component){
-                if(!['name', 'class', 'position', 'owner', 'grid'].includes(property)){
-                    if(typeof(component[property]) == 'object'){
-                        if((component[property].X != null && component[property].Y != null && component[property].Z != null) || (component[property].Pitch != null && component[property].Yaw != null && component[property].Roll != null)){
-                            component[property] = formatVec(component[property], 2);
-                        }else if(!(property == 'Skin' && component.name == 'Component_BotSpawn')){
-                            component[property] = JSON.stringify(component[property]);
-                        }
-                    }
-                    instanceInfo += `<div><b>${property}:</b> ${component[property]}</div>`;
-                }
-            }
+            let finalProperty;
             markerData.tooltip = `<h1>${component.name.replaceAll(/.*_(.+)$/g, '$1')} Component</h1><hr>`
-                + `<div><b>Owner:</b> ${markerData.owner.displayName} (${markerData.owner.userName}) <span class="smol quiet">${markerData.owner.userId}</span></div>`
+                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (${Utils.sanitize(markerData.owner.userName)}) <span class="smol quiet"><a href="https://www.brickadia.com/users/${markerData.owner.userId}">${markerData.owner.userId}</a></span></div>`
                 + `<div><b>Grid:</b> ${component.grid == 1 ? 'World' : component.grid}</div>`
-                + instanceInfo
+                + formatProperties(component, ['name', 'class', 'position', 'owner', 'grid'])
                 + `<div><b>Position:</b> ${formatVec(component.position, 2)}</div>`
             ;
             switch(component.name){

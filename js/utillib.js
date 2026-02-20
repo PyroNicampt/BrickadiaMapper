@@ -113,12 +113,23 @@ export function attachClipboardHooks(element){
         if(!hookTarget.title) hookTarget.title = 'Ctrl+C to copy special';
         hookTarget.style.cursor = 'copy';
         hookTarget.addEventListener('mouseenter', e => {
-            customClipboard = hookTarget.dataset.clipboard;
+            customClipboard = decodeURIComponent(hookTarget.dataset.clipboard);
         });
         hookTarget.addEventListener('mouseleave', e => {
-            if(customClipboard == hookTarget.dataset.clipboard) customClipboard = null;
+            if(customClipboard == decodeURIComponent(hookTarget.dataset.clipboard)) customClipboard = null;
         });
         element.removeAttribute('data-clipboard');
     }
 }
+
+const sanitizer = document.createElement('div');
+sanitizer.style.display = 'none';
+export function sanitize(input){
+    sanitizer.innerText = input;
+    return sanitizer.innerHTML;
+}
+
+export function unsanitize(input){
+    sanitizer.innerHTML = input;
+    return sanitizer.innerText;
 }

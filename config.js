@@ -15,6 +15,8 @@ export const maxZoneLength = 700;
 
 export const mapperVersion = 1;
 
+export const maxPropertyStringLength = 100;
+
 /** How many pixels around the view is still considered "visible", beyond this and items are culled. */
 export const viewCullMargin = 90;
 
