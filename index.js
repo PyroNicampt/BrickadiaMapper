@@ -600,8 +600,8 @@ function redrawMap(){
             markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin )
                 continue; // View Culling
         if(!marker.tooltipPosition) marker.tooltipPosition = {};
-        marker.tooltipPosition.x = MapData.view.unconvertX(markerX);
-        marker.tooltipPosition.y = MapData.view.unconvertY(markerY);
+        marker.tooltipPosition.x = MapData.view.unconvertX(markerX / MapData.view.pixelRatio);
+        marker.tooltipPosition.y = MapData.view.unconvertY(markerY / MapData.view.pixelRatio);
         switch(marker.type){
             case 'entity':
                 if(!(MapData.layers.markers && MapData.layers.entities)) break;

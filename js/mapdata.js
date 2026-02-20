@@ -168,20 +168,20 @@ export function testTooltip(cursorX, cursorY){
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }
         }else if(marker.tooltipHitzone && marker.tooltipHitzone.width && marker.tooltipHitzone.height){
-            width = marker.tooltipHitzone.width * 0.5/view.scale;
-            height = marker.tooltipHitzone.height * 0.5/view.scale;
-            if(    marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale <= width
-                && marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale >= -width
-                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale <= height
-                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale >= -height){
+            width = marker.tooltipHitzone.width * 0.5/view.scale/view.pixelRatio;
+            height = marker.tooltipHitzone.height * 0.5/view.scale/view.pixelRatio;
+            if(    marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale/view.pixelRatio <= width
+                && marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale/view.pixelRatio >= -width
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale/view.pixelRatio <= height
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale/view.pixelRatio >= -height){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }
         }else{
             if(marker.tooltipHitzone)
-                radius = (marker.tooltipHitzone.radius ?? Config.tooltipHitzone.default.radius) / view.scale;
+                radius = (marker.tooltipHitzone.radius ?? Config.tooltipHitzone.default.radius) / view.scale / view.pixelRatio;
             else
-                radius = Config.tooltipHitzone.default.radius / view.scale;
+                radius = Config.tooltipHitzone.default.radius / view.scale / view.pixelRatio;
             if(Math.pow(marker.tooltipPosition.x - cursorX, 2) + Math.pow(marker.tooltipPosition.y - cursorY, 2) <= radius * radius){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
