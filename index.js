@@ -460,7 +460,7 @@ async function loadMapperData(file){
                 cullOffsetY: 1024 / Config.coordScaleFac,
                 maxZoom: 12,
             };
-            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(markerData.position.x * Config.coordScaleFac, 2)} ${(Utils.round(markerData.position.y * Config.coordScaleFac, 2))} ${Utils.round(markerData.position.z * Config.coordScaleFac, 2)} 0`;
+            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(markerData.position.y * Config.coordScaleFac, 2)} ${(Utils.round(markerData.position.x * Config.coordScaleFac, 2))} ${Utils.round(markerData.position.z * Config.coordScaleFac, 2)} 0`;
             minAlt = Math.min(markerData.position.z, minAlt);
             maxAlt = Math.max(markerData.position.z, maxAlt);
             MapData.addMarker(markerData);
