@@ -22,6 +22,7 @@ let isNavigating = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     //await loadMapperData('data/mapperdata.json');
+    //await loadMapperData('data/mapperdata.gz');
     MapData.sortMarkers();
 
     MapData.matrix.initialize();
@@ -40,8 +41,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         warningPanel.innerHTML = '';
         warningPanel.style.display = 'none';
         for(let item of event.dataTransfer.items){
-            if(item.kind == 'file' && (item.type === 'application/json' || item.type === 'text/json')){
+            if(item.kind != 'file') continue;
+            console.log(item.type)
+            if(item.type === 'application/json' || item.type === 'text/json'){
                 await loadMapperData(JSON.parse(await(item.getAsFile().text())));
+            }else if(item.type === 'application/x-gzip'){
+                await loadMapperData(await new Response(item.getAsFile().stream().pipeThrough(new DecompressionStream('gzip'))).json());
             }
         }
         MapData.sortMarkers();
@@ -320,7 +325,18 @@ function tooltipSetup(){
 async function loadMapperData(file){
     let mDat;
     if(typeof(file) == 'object') mDat = file;
-    else if(typeof(file) == 'string') mDat = await (await fetch(new Request(file))).json();
+    else if(typeof(file) == 'string'){
+        let fileResponse = await fetch(new Request(file));
+        if(!fileResponse.ok){
+            console.log(`Invalid file at ${file}`);
+            return;
+        }
+        if(file.endsWith('.json')){
+            mDat = await (fileResponse).json();
+        }else if(file.endsWith('.gz')){
+            mDat = await new Response(fileResponse.body.pipeThrough(new DecompressionStream('gzip'))).json();
+        }
+    }
 
     if(!(mDat && mDat.owners)){
         writeWarning('Invalid JSON data');
