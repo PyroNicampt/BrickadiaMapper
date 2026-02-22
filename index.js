@@ -7,6 +7,7 @@ import {Color} from './js/colorlib.js';
 import * as Config from './config.js';
 import * as MapData from './js/mapdata.js';
 import * as Legend from './legend.js';
+import * as Stats from './js/statistics.js';
 
 const mapContainer = document.getElementById('mapContainer');
 const mapCanvas = document.getElementById('mapCanvas');
@@ -17,6 +18,7 @@ const mapSprites = document.getElementById('mapSprites');
 const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
 const markerCountDisplay = document.getElementById('markerCountDisplay');
 const warningPanel = document.getElementById('warningPanel');
+const statsPanel = document.getElementById('statsPanel');
 
 let isNavigating = false;
 
@@ -374,6 +376,12 @@ async function loadMapperData(file){
         }
         return result;
     }
+    for(let i=0; i<mDat.owners.UserIds.length; i++){
+        Stats.addUser(mDat.owners.UserIds[i], {
+            displayName: Utils.sanitize(mDat.owners.DisplayNames[i]),
+            userName: Utils.sanitize(mDat.owners.UserNames[i]),
+        });
+    }
     if(mDat.entities){
         for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
             let ownerIndex = mDat.entities.OwnerIndices[i];
@@ -619,6 +627,7 @@ function redrawMap(){
     let tempMeasure = {};
     //Draw Static Markers
     let markerCount = 0;
+    Stats.resetCounts();
     let markerX;
     let markerY;
     for(const marker of MapData.markers){
@@ -649,6 +658,7 @@ function redrawMap(){
                 )) break;
                 marker.visible = true;
                 markerCount++;
+                Stats.addCountForUser(marker.owner.userId);
                 spriteSize = 5;
                 if(marker.frozen) mapctx.fillStyle = Config.colors.entity_frozen;
                 else if(marker.sleeping) mapctx.fillStyle = Config.colors.entity_asleep;
@@ -698,6 +708,7 @@ function redrawMap(){
                 ) break;
                 marker.visible = true;
                 markerCount++;
+                Stats.addCountForUser(marker.owner.userId);
                 spriteSize = Math.max(10, 0.10 * MapData.view.scale);
                 if(MapData.layers.renderradii && marker.componentRadius && (
                        marker.componentImpact == 0 && MapData.layers.radius_impact_mask & 1
@@ -747,6 +758,7 @@ function redrawMap(){
                 if(!MapData.layers.markers) break;
                 marker.visible = true;
                 markerCount++;
+                Stats.addCountForUser(marker.owner.userId);
                 curSprite = Config.spriteBounds.unknown;
                 spriteSize = 30;
                 break;
@@ -766,6 +778,13 @@ function redrawMap(){
         }
     }
     markerCountDisplay.innerHTML = markerCount + ' markers visible';
+    if(Stats.show){
+        let statsText = `${markerCount} markers visible<hr>`;
+        for(let stat of Stats.getStats()){
+            statsText += `<div>${stat.count} > <b>${stat.displayName}</b> (<a href="https://www.brickadia.com/users/${stat.userId}" title="${stat.userId}">${stat.userName}</a>)`;
+        }
+        statsPanel.innerHTML = statsText;
+    }
     MapData.view.dirty = false;
 }
 

@@ -196,6 +196,15 @@ a:hover{
     }
 }
 
+#statsPanel{
+    font-size: 13px;
+    overflow: hidden;
+    >div{
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}
+
 #stats{
     pointer-events: none;
     position: fixed;

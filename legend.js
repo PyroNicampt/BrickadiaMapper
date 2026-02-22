@@ -4,6 +4,7 @@ import * as Utils from './js/utillib.js';
 import * as Config from './config.js';
 import { Color } from './js/colorlib.js';
 import * as MapData from './js/mapdata.js';
+import * as Stats from './js/statistics.js';
 
 const settingsVersion = 1;
 
@@ -309,6 +310,17 @@ let settingEntries = [
         state: '',
         placeholder: 'Your Username Here',
     },
+    {
+        label: 'Statistics',
+        id: 'toggle_statistics',
+        saveState: true,
+        state: true,
+        func: state => {
+            Stats.showStats(state);
+            document.getElementById('statsPanel').parentElement.style.display = state ? '' : 'none';
+            MapData.view.dirty = true;
+        }
+    },
 ];
 
 const legendKey = document.getElementById('legendKey');
@@ -528,7 +540,7 @@ function resetSettingEntry(entry){
     }
 }
 
-function saveSetting(name, value){
+export function saveSetting(name, value){
     //console.trace(`saving 'setting_${name}=${encodeURIComponent(value)};'`);
     if(value == null){
         resetSetting(name);
@@ -537,7 +549,7 @@ function saveSetting(name, value){
     }
 }
 
-function loadSetting(name, defaultValue){
+export function loadSetting(name, defaultValue){
     const cookies = document.cookie.split(/\s*;\s*/);
     for(let cookie of cookies){
         if(cookie.startsWith('setting_'+name+'=')){
@@ -551,7 +563,7 @@ function loadSetting(name, defaultValue){
     return defaultValue;
 }
 
-function resetSetting(name){
+export function resetSetting(name){
     document.cookie = `setting_${name}=;expires=${new Date(0).toUTCString()};`;
 }
 
