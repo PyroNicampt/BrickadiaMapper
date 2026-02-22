@@ -252,6 +252,7 @@ function tooltipSetup(){
 
     document.addEventListener('copy', event => {
         let newClipboard = Utils.customClipboard ?? MapData.tooltipClipboard;
+        if(mouseOverTooltip) newClipboard = Utils.customClipboard;
         if(newClipboard){
             if(typeof(newClipboard) == 'function'){
                 event.clipboardData.setData('text/plain', newClipboard());
@@ -420,10 +421,12 @@ async function loadMapperData(file){
             let instanceInfo = '';
             if(mDat.entities.instances){
                 instanceInfo += `<div><b>Type:</b> ${mDat.entities.instances[i].name.replaceAll(/^Entity_/g, '')}</div>`;
-                instanceInfo += formatProperties(mDat.entities.instances[i], ['name', 'class']);
                 if(mDat.entities.instances[i].class == 'BrickGridDynamicActor'){
+                    if(mDat.entities.instances[i].hasEngine) markerData.hasEngine = true;
+                    markerData.isGrid = true;
                     delete markerData.colors;
                 }
+                instanceInfo += formatProperties(mDat.entities.instances[i], ['name', 'class']);
             }
             
             let truePosition = {
@@ -580,6 +583,20 @@ async function loadMapperData(file){
                 case 'BrickComponentType_WireGraph_Exec_Entity_SetGravityDirection':
                     markerData.componentCategory = 'gravities';
                     break;
+                case 'Component_ItemSpawn':
+                    markerData.componentCategory = 'itemspawners';
+                    if(component.PickupScale > 10 || component.PickupScale < -10) markerData.componentImpact = 3;
+                    else if(!component.bPickupEnabled) markerData.componentImpact = 0;
+                    break;
+                case 'Component_SpawnPoint':
+                case 'Component_CheckPoint':
+                    markerData.componentCategory = 'respawners';
+                    if(component.name == 'Component_CheckPoint') markerData.componentImpact = 0;
+                    else if(markerData.owner.userId == 'ffffffff-ffff-ffff-ffff-ffffffffffff') markerData.componentImpact = 2;
+                    break;
+                case 'Component_BrickPropertyChanger':
+                    markerData.componentCategory = 'propertychangers';
+                    break;
                 default:
                     markerData.componentCategory = 'others';
                     break;
@@ -625,6 +642,11 @@ function redrawMap(){
                 if(!MapData.layers.entities_asleep && marker.sleeping) break;
                 if(!MapData.layers.entities_awake && !(marker.frozen || marker.sleeping)) break;
                 if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
+                if(!(
+                       MapData.layers.entity_mask & 1 && marker.isGrid && !marker.hasEngine
+                    || MapData.layers.entity_mask & 2 && marker.isGrid && marker.hasEngine
+                    || MapData.layers.entity_mask & 4 && !marker.isGrid
+                )) break;
                 marker.visible = true;
                 markerCount++;
                 spriteSize = 5;

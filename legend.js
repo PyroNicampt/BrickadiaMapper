@@ -56,6 +56,25 @@ let settingEntries = [
                 },
                 children:[
                     {
+                        label: 'Filter By Type',
+                        id: 'dropdown_entity_type',
+                        saveState: true,
+                        state: 7,
+                        options: [
+                            [7, 'All'],
+                            [3, 'Brick Grids'],
+                            [1, 'Grids Without Engines'],
+                            [2, 'Grids With Engines'],
+                            [6, 'Wheels and Grids With Engines'],
+                            [4, 'Wheels'],
+                        ],
+                        func: state =>{
+                            state = Number(state);
+                            MapData.layers.entity_mask = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
                         label: 'Awake',
                         id: 'toggle_entities_awake',
                         saveState: true,
@@ -138,6 +157,16 @@ let settingEntries = [
                         }
                     },
                     {
+                        label: 'Brick Property Changers',
+                        id: 'toggle_component_propertychangers',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_propertychangers = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
                         label: 'Teleports',
                         id: 'toggle_component_teleports',
                         saveState: true,
@@ -158,12 +187,32 @@ let settingEntries = [
                         }
                     },
                     {
-                        label: 'Bots',
+                        label: 'Bot Spawners',
                         id: 'toggle_component_bots',
                         saveState: true,
                         state: false,
                         func: state =>{
                             MapData.layers.component_bots = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Respawn Points',
+                        id: 'toggle_component_respawners',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_respawners = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
+                        label: 'Item Spawners',
+                        id: 'toggle_component_itemspawners',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_itemspawners = state;
                             MapData.view.dirty = true;
                         }
                     },
