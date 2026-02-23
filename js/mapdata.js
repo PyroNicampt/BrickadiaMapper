@@ -56,6 +56,7 @@ export let matrix = {
         
         matrix.width = matrix.maxX-matrix.minX;
         matrix.height = matrix.maxY-matrix.minY;
+        matrix.depth = matrix.maxAlt-matrix.minAlt;
 
         console.log(`(${matrix.minX}, ${matrix.minY}) to (${matrix.maxX}, ${matrix.maxY}). Altitude from ${matrix.minAlt} to ${matrix.maxAlt}`);
     }
@@ -146,13 +147,12 @@ export let tooltipClipboard = '';
 /**
  * Finds the relevant tooltip for where the cursor is (if possible)
  * Returns "" if there is none.
+ * cursorX and cursorY are window coordinates.
  * @param {Number} cursorX 
  * @param {Number} cursorY 
  * @returns {String}
  */
 export function testTooltip(cursorX, cursorY){
-    cursorX = view.unconvertX(cursorX);
-    cursorY = view.unconvertY(cursorY);
     tooltipClipboard = '';
 
     let finalTooltip = '';
@@ -167,21 +167,47 @@ export function testTooltip(cursorX, cursorY){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }
+        }else if(marker.tooltipHitPoly){
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+            for(let i=0; i<marker.tooltipHitPoly.length; i += 2){
+                minX = Math.min(minX, marker.tooltipHitPoly[i]);
+                maxX = Math.max(maxX, marker.tooltipHitPoly[i]);
+                minY = Math.min(minY, marker.tooltipHitPoly[i+1]);
+                maxY = Math.max(maxY, marker.tooltipHitPoly[i+1]);
+            }
+            if(cursorX >= minX && cursorX <= maxX && cursorY >= minY && cursorY <= maxY){
+                let isColliding = true;
+                for(let i=0; i<marker.tooltipHitPoly.length; i += 2){
+                    if( 0 >
+                        (cursorX - marker.tooltipHitPoly[i]) * (marker.tooltipHitPoly[(i+3) % marker.tooltipHitPoly.length] - marker.tooltipHitPoly[i+1])
+                        - (cursorY - marker.tooltipHitPoly[i+1]) * (marker.tooltipHitPoly[(i+2) % marker.tooltipHitPoly.length] - marker.tooltipHitPoly[i])
+                    ){
+                        isColliding = false;
+                    }
+                }
+                if(isColliding){
+                    finalTooltip = marker.tooltip ?? finalTooltip;
+                    tooltipClipboard = marker.clipboard ?? tooltipClipboard;
+                }
+            }
         }else if(marker.tooltipHitzone && marker.tooltipHitzone.width && marker.tooltipHitzone.height){
-            width = marker.tooltipHitzone.width * 0.5/view.scale/view.pixelRatio;
-            height = marker.tooltipHitzone.height * 0.5/view.scale/view.pixelRatio;
-            if(    marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale/view.pixelRatio <= width
-                && marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0)/view.scale/view.pixelRatio >= -width
-                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale/view.pixelRatio <= height
-                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0)/view.scale/view.pixelRatio >= -height){
+            width = marker.tooltipHitzone.width * 0.5;
+            height = marker.tooltipHitzone.height * 0.5;
+            if(    marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0) <= width
+                && marker.tooltipPosition.x - cursorX + (marker.tooltipHitzone.offsetX ?? 0) >= -width
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0) <= height
+                && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0) >= -height){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
             }
         }else{
             if(marker.tooltipHitzone)
-                radius = (marker.tooltipHitzone.radius ?? Config.tooltipHitzone.default.radius) / view.scale / view.pixelRatio;
+                radius = (marker.tooltipHitzone.radius ?? Config.tooltipHitzone.default.radius);
             else
-                radius = Config.tooltipHitzone.default.radius / view.scale / view.pixelRatio;
+                radius = Config.tooltipHitzone.default.radius;
             if(Math.pow(marker.tooltipPosition.x - cursorX, 2) + Math.pow(marker.tooltipPosition.y - cursorY, 2) <= radius * radius){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;

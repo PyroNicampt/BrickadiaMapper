@@ -294,17 +294,30 @@ let settingEntries = [
         ]
     },
     {
-        label: 'Occupied Chunks',
-        id: 'toggle_brickedchunks',
+        label: 'Chunks',
+        id: 'dropdown_chunk_display',
         saveState: true,
-        state: true,
-        func: state => {
-            MapData.layers.brickedchunks = state;
+        state: 1,
+        options: [
+            [0, 'Hide'],
+            [1, 'Full Chunk'],
+            [2, 'Brick Bounds'],
+            [3, 'Dual'],
+            [5, 'Full Chunk Fancy'],
+            [6, 'Brick Bounds Fancy'],
+            [7, 'Dual Fancy'],
+        ],
+        func: state =>{
+            state = Number(state);
+            MapData.layers.chunk_display = state;
             MapData.view.dirty = true;
-        },
+        }
     },
     {
-        label: 'Username',
+        id:'hr',
+    },
+    {
+        label: 'TP Username',
         id: 'field_username',
         saveState: true,
         state: '',
@@ -477,12 +490,17 @@ function addSettingEntry(thisSetting, parentElement, indent=0){
             break;
         case 'header':
             break;
+        case 'hr':
+            thisSetting.divContainer.remove();
+            thisSetting.divContainer = document.createElement('hr');
+            thisSetting.specialType = true;
+            break;
         default:
             thisSetting.divContainer.remove();
             return;
     }
     parentElement.appendChild(thisSetting.divContainer);
-    if(thisSetting.settingType != 'button'){
+    if(thisSetting.settingType != 'button' && !thisSetting.specialType){
         thisSetting.labelElement.innerHTML = thisSetting.label;
         thisSetting.labelElement.htmlFor = thisSetting.id;
         if(thisSetting.tooltip) thisSetting.labelElement.title = thisSetting.tooltip;
@@ -581,12 +599,13 @@ function autocast(value){
 
 let pageLoadUpdateDate = null;
 async function setLastUpdateData(){
+    let lastUpdateElement = document.getElementById('lastUpdate');
+    let changelog = document.getElementById('changelog');
     if(!window.location.host.includes('github')){
-        document.getElementById('lastUpdate').parentElement.style.display = 'none';
+        lastUpdateElement.parentElement.style.display = 'none';
         return;
     }
     let commits = await (await fetch(new Request('https://api.github.com/repos/PyroNicampt/BrickadiaMapper/commits'))).json();
-    let lastUpdateElement = document.getElementById('lastUpdate');
     if(!commits){
         lastUpdateElement.innerHTML = '<a href="https://github.com/PyroNicampt/BrickadiaMapper/commits/main/" title="Could not fetch commit history">Fetch Error</a>';
         return;

@@ -111,7 +111,7 @@ export function attachClipboardHooks(element){
 
     for(let hookTarget of hookList){
         if(!hookTarget.title) hookTarget.title = 'Ctrl+C to copy special';
-        hookTarget.style.cursor = 'copy';
+        hookTarget.classList.add('clipboardItem');
         hookTarget.addEventListener('mouseenter', e => {
             customClipboard = decodeURIComponent(hookTarget.dataset.clipboard);
         });

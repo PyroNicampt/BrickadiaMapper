@@ -13,21 +13,21 @@
         <canvas id="mapCanvas"></canvas>
     </div>
     <div id="tooltip" class="panel" style="display:none; pointer-events:none;"></div>
-    <div id="stats" class="orange">
+    <div id="stats">
         <div id="navigationControls">
             <button id="navSkew" class="panel" title="Skew"><span id="navSkewHandle"><span>&#x21c6;</span></span></button>
-            <button id="navZoomIn" class="panel orange" title="Zoom In">+</button>
-            <button id="navZoomOut" class="panel orange" title="Zoom Out">-</button>
+            <button id="navZoomIn" class="panel highlight" title="Zoom In">+</button>
+            <button id="navZoomOut" class="panel highlight" title="Zoom Out">-</button>
         </div>
         <div id="zoomLevelDisplay"></div>
         <div id="cursorCoordDisplay"></div>
         <div id="markerCountDisplay"></div>
-        Map v0.0.9 alpha
+        Map v0.1.0 alpha
     </div>
     <div id="topleft">
-        <div id="headerbar" class="panel orange">
+        <div id="headerbar" class="panel">
             <div>
-                <span id="redrawTrigger"></span><span class="outlined">Brickadia Mapper</span>
+                <span id="redrawTrigger"></span><span class="outlined">Brickadia</span> <span class="outlined highlight">Mapper</span> <img src="favicon.png" style="height: 1.5lh; transform:translate(5px, -10px); display: inline-block; position: absolute; filter:hue-rotate(30deg)">
             </div>
         </div>
         <div id="legend">
@@ -52,6 +52,7 @@
                 <div class="panel linkpanel">
                     <a href="https://github.com/PyroNicampt/BrickadiaMapper">Source</a>
                     <a href="https://github.com/PyroNicampt/BrickadiaMapper/issues">Issue Tracker</a>
+                    <a href="https://github.com/PyroNicampt/brdb-js">brdb-js</a>
                 </div>
                 <div class="panel">
                     <h3>Key</h3>
@@ -68,7 +69,7 @@
                     <div id="statsPanel"></div>
                 </div>
             </div>
-            <button id="legendButton" class="panel orange"><svg style="transform:rotate(180deg) translateY(0px)" viewBox="0 0 32 32"><path fill="currentColor" d="M31 16 20 31l-16 0L15 16 4 1l16 0Z"/></svg></button>
+            <button id="legendButton" class="panel highlight"><svg style="transform:rotate(180deg) translateY(0px)" viewBox="0 0 32 32"><path fill="currentColor" d="M31 16 20 31l-16 0L15 16 4 1l16 0Z"/></svg></button>
         </div>
     </div>
     <div style="display:none">

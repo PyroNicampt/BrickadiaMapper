@@ -44,6 +44,27 @@ export class Color{
         }`;
     }
 
+    alpha = factor => new Color(
+        this.r,
+        this.g,
+        this.b,
+        this.a * factor
+    );
+    
+    mult = factor => new Color(
+        this.r * factor,
+        this.g * factor,
+        this.b * factor,
+        this.a
+    );
+
+    add = factor => new Color(
+        this.r + factor,
+        this.g + factor,
+        this.b + factor,
+        this.a
+    );
+
     /** Return a random color */
     static random(){
         return new Color(Math.random(), Math.random(), Math.random());

@@ -13,16 +13,23 @@ export const coordScaleFac = 100;
 
 export const maxZoneLength = 700;
 
-export const mapperVersion = 1;
+export const mapperVersion = 2;
 
 export const maxPropertyStringLength = 100;
 
 /** How many pixels around the view is still considered "visible", beyond this and items are culled. */
-export const viewCullMargin = 90;
+export const viewCullMargin = 6;
 
 export const tooltipHitzone = {
     default: {radius:12},
 };
+
+export const chunk_gradient = [
+    new Color('#8a99de77'),
+    new Color('#75c2eb77'),
+    new Color('#cae6f977'),
+    new Color('#f7fcff77'),
+];
 
 export const colors = {
     outline: '#000f',
@@ -37,7 +44,8 @@ export const colors = {
     impact_high: '#f7004aee',
     radius: '#333388',
     radius_negative: '#ff3388',
-}
+    grid: '#222a',
+};
 
 export const spriteBounds = {
     unknown: new SpriteBounds(0,0,20,20),
@@ -49,4 +57,4 @@ export const spriteBounds = {
     impact_med: new SpriteBounds(40,40,20,20),
     impact_high: new SpriteBounds(60,40,20,20),
     player: new SpriteBounds(20,0,20,20),
-}
+};

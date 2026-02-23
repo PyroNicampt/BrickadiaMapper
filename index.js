@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Legend.initialize();
     tooltipSetup();
 
+    //return;
     document.ondragover = document.ondragenter = event => {
         event.preventDefault();
     }
@@ -198,11 +199,14 @@ function mapNavigationSetup(){
 
     const navSkew = document.getElementById('navSkew');
     const navSkewHandle = document.getElementById('navSkewHandle');
+    const skewPow = 2;
     const setSkew = (x, y) => {
-        MapData.view.skewX = x * 10;
-        MapData.view.skewY = y * 10;
+        navSkewHandle.style.transform = `translate(${x*navSkew.clientWidth*0.5}px, ${y*navSkew.clientHeight*0.5}px)`;
+        x = Math.sign(x) * Math.pow(Math.abs(x), skewPow);
+        y = Math.sign(y) * Math.pow(Math.abs(y), skewPow);
+        MapData.view.skewX = x * 2;
+        MapData.view.skewY = y * 2;
         MapData.view.dirty = true;
-        navSkewHandle.style.transform = `translate(${x*navSkew.clientWidth*0.5}px, ${y*navSkew.clientHeight*0.5}px)`
     };
     const skewDownHandler = e => {
         skewMoveHandler(e);
@@ -287,8 +291,11 @@ function tooltipSetup(){
     });
 
     const tooltipUpdate = ts => {
+        let oldTooltipX = tooltipX;
+        let oldTooltipY = tooltipY;
         if(ts && tooltipDirty){
             let tooltipContents = MapData.testTooltip(tooltipX, tooltipY);
+            if(typeof(tooltipContents) == 'function') tooltipContents = tooltipContents();
             if(tooltipContents != '' && !removeTooltip && !isNavigating){
                 if(!(freezeTooltip || mouseOverTooltip) || !tooltipActive){
                     if(tooltipContents != prevTooltipContents){
@@ -367,7 +374,7 @@ async function loadMapperData(file){
                 }
                 if(typeof(object[property]) == 'string') finalProperty = object[property].replaceAll(/[\n\r\s]+/gm, ' ');
                 if(typeof(object[property]) == 'string' && object[property].length > Config.maxPropertyStringLength){
-                    finalProperty = `<span title="Ctrl+C to copy full contents" class="orange" data-clipboard="${encodeURIComponent(object[property])}">${Utils.sanitize(finalProperty.substring(0,Config.maxPropertyStringLength))}...</span>`;
+                    finalProperty = `<span title="Ctrl+C to copy full contents" class="highlight" data-clipboard="${encodeURIComponent(object[property])}">${Utils.sanitize(finalProperty.substring(0,Config.maxPropertyStringLength))}...</span>`;
                 }
                 else
                     finalProperty = Utils.sanitize(object[property]);
@@ -375,6 +382,9 @@ async function loadMapperData(file){
             }
         }
         return result;
+    }
+    const getTpCommand = (vec, scaleFactor = 1) => {
+        return `/tp "${document.getElementById('field_username').value}" ${Utils.round((vec.x ?? vec.X) * scaleFactor, 2)} ${(Utils.round((vec.y ?? vec.Y) * scaleFactor, 2))} ${Utils.round((vec.z ?? vec.Z) * scaleFactor, 2)} 0`;
     }
     for(let i=0; i<mDat.owners.UserIds.length; i++){
         Stats.addUser(mDat.owners.UserIds[i], {
@@ -458,45 +468,63 @@ async function loadMapperData(file){
                 + `<div>${physState}</div>`
             ;
             if(markerData.colors){
-                markerData.tooltip += '<div><b>Colors:</b></div><div style="font-size:16">';
+                markerData.tooltip += '<div><b>Colors:</b></div><div style="font-size:16px">';
                 for(let col in markerData.colors){
                     markerData.tooltip += `<span class="swatch" title="${col}" style="background:${markerData.colors[col].hex}"></span>`;
                 }
                 markerData.tooltip += '</div>';
             }
-            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(truePosition.x, 2)} ${(Utils.round(truePosition.y, 2))} ${Utils.round(truePosition.z, 2)} 0`;
+            markerData.clipboard = () => getTpCommand(truePosition);
             MapData.addMarker(markerData);
         }
     }
     if(mDat.chunks){
-        let minAlt = Infinity;
-        let maxAlt = -Infinity;
         for(let chunk of mDat.chunks){
             let markerData = {
                 type: 'chunk',
                 position: {
-                    y: (chunk.position.x * 2048 + 2048)/Config.coordScaleFac,
-                    x: (chunk.position.y * 2048)/Config.coordScaleFac,
-                    z: (chunk.position.z * 2048)/Config.coordScaleFac,
+                    y: (chunk.position.x + chunk.size * 0.5)/Config.coordScaleFac,
+                    x: (chunk.position.y + chunk.size * -0.5)/Config.coordScaleFac,
+                    z: (chunk.position.z + chunk.size * 0.5)/Config.coordScaleFac,
                 },
-                tooltip: `Chunk ${chunk.position.x}_${chunk.position.y}_${chunk.position.z}.mps`
-                    +`<hr><div>${chunk.brickCount} bricks</div>`
-                    +`<div>${chunk.componentCount} components</div>`
-                    +`<div>${chunk.wireCount} wires</div>`,
+                chunkBoundsSize: {
+                    x: chunk.boundsMax.x - chunk.boundsMin.x,
+                    y: chunk.boundsMax.y - chunk.boundsMin.y,
+                    z: chunk.boundsMax.z - chunk.boundsMin.z,
+                },
+                chunkAveragePosition: { //Average by halving then adding to avoid any chance of overflow/underflow
+                    x: chunk.boundsMin.x * 0.5 + chunk.boundsMax.x * 0.5,
+                    y: chunk.boundsMin.y * 0.5 + chunk.boundsMax.y * 0.5,
+                    z: chunk.boundsMin.z * 0.5 + chunk.boundsMax.z * 0.5,
+                },
+                chunkBoundsMin: chunk.boundsMin,
+                chunkBoundsMax: chunk.boundsMax,
+                chunkGeometricMedian: chunk.geometricMedian,
+                chunkSize: chunk.size,
                 cullOffsetX: 1024 / Config.coordScaleFac,
                 cullOffsetY: 1024 / Config.coordScaleFac,
-                maxZoom: 12,
             };
-            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(markerData.position.y * Config.coordScaleFac, 2)} ${(Utils.round(markerData.position.x * Config.coordScaleFac, 2))} ${Utils.round(markerData.position.z * Config.coordScaleFac, 2)} 0`;
-            minAlt = Math.min(markerData.position.z, minAlt);
-            maxAlt = Math.max(markerData.position.z, maxAlt);
+            markerData.chunkBorderMin = {
+                x: chunk.position.x + chunk.size * -0.5,
+                y: chunk.position.y + chunk.size * -0.5,
+                z: chunk.position.z + chunk.size * -0.5,
+            };
+            markerData.chunkBorderMax = {
+                x: chunk.position.x + chunk.size * 0.5,
+                y: chunk.position.y + chunk.size * 0.5,
+                z: chunk.position.z + chunk.size * 0.5,
+            };
+            markerData.tooltip = () => `Chunk ${chunk.index3d.x}_${chunk.index3d.y}_${chunk.index3d.z}.mps<hr>`
+            +`<div><b>Chunk Center</b>: <span data-clipboard="${encodeURIComponent(getTpCommand(chunk.position))}">${formatVec(chunk.position)}</span></div>`
+            +`<div><b>Largest Cluster</b>: <span data-clipboard="${encodeURIComponent(getTpCommand(markerData.chunkGeometricMedian))}">${formatVec(markerData.chunkGeometricMedian)}</span></div>`
+            +`<div><b>Brick Bounds Center</b>: <span data-clipboard="${encodeURIComponent(getTpCommand(markerData.chunkAveragePosition))}">${formatVec(markerData.chunkAveragePosition)}</span></div>`
+            +`<div><b>Brick Bounds Size</b>: ${formatVec(markerData.chunkBoundsSize)}</div>`
+            +`<div>${chunk.brickCount} bricks</div>`
+            +`<div>${chunk.componentCount} components</div>`
+            +`<div>${chunk.wireCount} wires</div>`
+            +`<div>`;
+            markerData.clipboard = () => MapData.layers.chunk_display & 2 ? getTpCommand(chunk.geometricMedian) : getTpCommand(chunk.position);
             MapData.addMarker(markerData);
-        }
-        if(maxAlt == minAlt) maxAlt += 1;
-        for(let marker of MapData.markers){
-            if(marker.type == 'chunk'){
-                marker.color = Color.blendSrgb(new Color(Config.colors.chunk_low), new Color(Config.colors.chunk_high), (marker.position.z - minAlt) / (maxAlt-minAlt)).hex;
-            }
         }
     }
     if(mDat.components){
@@ -609,7 +637,7 @@ async function loadMapperData(file){
                     markerData.componentCategory = 'others';
                     break;
             }
-            markerData.clipboard = () => `/tp "${document.getElementById('field_username').value}" ${Utils.round(component.position.x, 2)} ${(Utils.round(component.position.y, 2))} ${Utils.round(component.position.z, 2)} 0`;
+            markerData.clipboard = () => getTpCommand(component.position);
             MapData.addMarker(markerData);
         }
     }
@@ -621,29 +649,237 @@ function redrawMap(){
     mapCanvas.height = mapContainer.clientHeight * MapData.view.pixelRatio;
     zoomLevelDisplay.innerHTML = `Zoom: ${(MapData.view.scale*MapData.view.pixelRatio).toFixed(3)}x / ${(1/(MapData.view.scale*MapData.view.pixelRatio * Config.coordScaleFac / 1000)).toFixed(2)} studs/px`;
 
+    let worldBorderSize = (2097152 / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
+    mapctx.beginPath();
+    mapctx.lineWidth = 2;
+    mapctx.strokeStyle = Config.colors.grid;
+    mapctx.strokeRect(
+        MapData.view.convertX(0, 0) - 0.5 * worldBorderSize,
+        MapData.view.convertY(0, 0) - 0.5 * worldBorderSize,
+        worldBorderSize,
+        worldBorderSize,
+    );
+
     let curSprite;
     let spriteSize;
-    let textMeasure;
-    let tempMeasure = {};
+    let tmp = {};
     //Draw Static Markers
     let markerCount = 0;
     Stats.resetCounts();
     let markerX;
     let markerY;
+    const drawCube = (min, max, wireframe, marker) => {
+        tmp.is2d = !MapData.view.skewX && !MapData.view.skewY;
+        tmp.p1x = MapData.view.convertX(min.y / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p1y = MapData.view.convertY(min.x / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p2x = MapData.view.convertX(max.y / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p2y = MapData.view.convertY(min.x / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p3x = MapData.view.convertX(min.y / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p3y = MapData.view.convertY(max.x / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p4x = MapData.view.convertX(max.y / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        tmp.p4y = MapData.view.convertY(max.x / Config.coordScaleFac, min.z / Config.coordScaleFac);
+        if(!tmp.is2d){
+            tmp.p5x = MapData.view.convertX(min.y / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p5y = MapData.view.convertY(min.x / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p6x = MapData.view.convertX(max.y / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p6y = MapData.view.convertY(min.x / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p7x = MapData.view.convertX(min.y / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p7y = MapData.view.convertY(max.x / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p8x = MapData.view.convertX(max.y / Config.coordScaleFac, max.z / Config.coordScaleFac);
+            tmp.p8y = MapData.view.convertY(max.x / Config.coordScaleFac, max.z / Config.coordScaleFac);
+        }
+        if(wireframe){
+            if(tmp.is2d){
+                mapctx.moveTo(tmp.p1x, tmp.p1y);
+                mapctx.lineTo(tmp.p2x, tmp.p2y);
+                mapctx.lineTo(tmp.p4x, tmp.p4y);
+                mapctx.lineTo(tmp.p3x, tmp.p3y);
+                mapctx.lineTo(tmp.p1x, tmp.p1y);
+            }else{
+                if(MapData.view.skewX > 0 && MapData.view.skewY > 0){
+                    mapctx.moveTo(tmp.p1x, tmp.p1y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    mapctx.moveTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.moveTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
+                        marker.tooltipHitPoly[2] = tmp.p5x; marker.tooltipHitPoly[3] = tmp.p5y;
+                        marker.tooltipHitPoly[4] = tmp.p6x; marker.tooltipHitPoly[5] = tmp.p6y;
+                        marker.tooltipHitPoly[6] = tmp.p8x; marker.tooltipHitPoly[7] = tmp.p8y;
+                        marker.tooltipHitPoly[8] = tmp.p4x; marker.tooltipHitPoly[9] = tmp.p4y;
+                        marker.tooltipHitPoly[10] = tmp.p3x; marker.tooltipHitPoly[11] = tmp.p3y;
+                    }
+                }else if(MapData.view.skewX > 0 && MapData.view.skewY <= 0){
+                    mapctx.moveTo(tmp.p2x, tmp.p2y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    mapctx.moveTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.moveTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p2x; marker.tooltipHitPoly[1] = tmp.p2y;
+                        marker.tooltipHitPoly[2] = tmp.p6x; marker.tooltipHitPoly[3] = tmp.p6y;
+                        marker.tooltipHitPoly[4] = tmp.p8x; marker.tooltipHitPoly[5] = tmp.p8y;
+                        marker.tooltipHitPoly[6] = tmp.p7x; marker.tooltipHitPoly[7] = tmp.p7y;
+                        marker.tooltipHitPoly[8] = tmp.p3x; marker.tooltipHitPoly[9] = tmp.p3y;
+                        marker.tooltipHitPoly[10] = tmp.p1x; marker.tooltipHitPoly[11] = tmp.p1y;
+                    }
+                }else if(MapData.view.skewX <= 0 && MapData.view.skewY <= 0){
+                    mapctx.moveTo(tmp.p4x, tmp.p4y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    mapctx.moveTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.moveTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p4x; marker.tooltipHitPoly[1] = tmp.p4y;
+                        marker.tooltipHitPoly[2] = tmp.p8x; marker.tooltipHitPoly[3] = tmp.p8y;
+                        marker.tooltipHitPoly[4] = tmp.p7x; marker.tooltipHitPoly[5] = tmp.p7y;
+                        marker.tooltipHitPoly[6] = tmp.p5x; marker.tooltipHitPoly[7] = tmp.p5y;
+                        marker.tooltipHitPoly[8] = tmp.p1x; marker.tooltipHitPoly[9] = tmp.p1y;
+                        marker.tooltipHitPoly[10] = tmp.p2x; marker.tooltipHitPoly[11] = tmp.p2y;
+                    }
+                }else{
+                    mapctx.moveTo(tmp.p3x, tmp.p3y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    mapctx.moveTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.moveTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p3x; marker.tooltipHitPoly[1] = tmp.p3y;
+                        marker.tooltipHitPoly[2] = tmp.p7x; marker.tooltipHitPoly[3] = tmp.p7y;
+                        marker.tooltipHitPoly[4] = tmp.p5x; marker.tooltipHitPoly[5] = tmp.p5y;
+                        marker.tooltipHitPoly[6] = tmp.p6x; marker.tooltipHitPoly[7] = tmp.p6y;
+                        marker.tooltipHitPoly[8] = tmp.p2x; marker.tooltipHitPoly[9] = tmp.p2y;
+                        marker.tooltipHitPoly[10] = tmp.p4x; marker.tooltipHitPoly[11] = tmp.p4y;
+                    }
+                }
+            }
+            mapctx.stroke();
+        }else{
+            if(tmp.is2d){
+                mapctx.moveTo(tmp.p1x, tmp.p1y);
+                mapctx.lineTo(tmp.p2x, tmp.p2y);
+                mapctx.lineTo(tmp.p4x, tmp.p4y);
+                mapctx.lineTo(tmp.p3x, tmp.p3y);
+                mapctx.lineTo(tmp.p1x, tmp.p1y);
+                if(marker.tooltipHitPoly){
+                    marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
+                    marker.tooltipHitPoly[2] = tmp.p2x; marker.tooltipHitPoly[3] = tmp.p2y;
+                    marker.tooltipHitPoly[4] = tmp.p4x; marker.tooltipHitPoly[5] = tmp.p4y;
+                    marker.tooltipHitPoly[6] = tmp.p3x; marker.tooltipHitPoly[7] = tmp.p3y;
+                    if(marker.tooltipHitPoly.length > 8) marker.tooltipHitPoly.splice(8, marker.tooltipHitPoly.length-8);
+                }
+            }else{
+                if(MapData.view.skewX > 0 && MapData.view.skewY > 0){
+                    mapctx.moveTo(tmp.p1x, tmp.p1y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
+                        marker.tooltipHitPoly[2] = tmp.p5x; marker.tooltipHitPoly[3] = tmp.p5y;
+                        marker.tooltipHitPoly[4] = tmp.p6x; marker.tooltipHitPoly[5] = tmp.p6y;
+                        marker.tooltipHitPoly[6] = tmp.p8x; marker.tooltipHitPoly[7] = tmp.p8y;
+                        marker.tooltipHitPoly[8] = tmp.p4x; marker.tooltipHitPoly[9] = tmp.p4y;
+                        marker.tooltipHitPoly[10] = tmp.p3x; marker.tooltipHitPoly[11] = tmp.p3y;
+                    }
+                }else if(MapData.view.skewX > 0 && MapData.view.skewY <= 0){
+                    mapctx.moveTo(tmp.p2x, tmp.p2y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p3x, tmp.p3y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p2x; marker.tooltipHitPoly[1] = tmp.p2y;
+                        marker.tooltipHitPoly[2] = tmp.p6x; marker.tooltipHitPoly[3] = tmp.p6y;
+                        marker.tooltipHitPoly[4] = tmp.p8x; marker.tooltipHitPoly[5] = tmp.p8y;
+                        marker.tooltipHitPoly[6] = tmp.p7x; marker.tooltipHitPoly[7] = tmp.p7y;
+                        marker.tooltipHitPoly[8] = tmp.p3x; marker.tooltipHitPoly[9] = tmp.p3y;
+                        marker.tooltipHitPoly[10] = tmp.p1x; marker.tooltipHitPoly[11] = tmp.p1y;
+                    }
+                }else if(MapData.view.skewX <= 0 && MapData.view.skewY <= 0){
+                    mapctx.moveTo(tmp.p4x, tmp.p4y);
+                    mapctx.lineTo(tmp.p8x, tmp.p8y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p1x, tmp.p1y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p4x; marker.tooltipHitPoly[1] = tmp.p4y;
+                        marker.tooltipHitPoly[2] = tmp.p8x; marker.tooltipHitPoly[3] = tmp.p8y;
+                        marker.tooltipHitPoly[4] = tmp.p7x; marker.tooltipHitPoly[5] = tmp.p7y;
+                        marker.tooltipHitPoly[6] = tmp.p5x; marker.tooltipHitPoly[7] = tmp.p5y;
+                        marker.tooltipHitPoly[8] = tmp.p1x; marker.tooltipHitPoly[9] = tmp.p1y;
+                        marker.tooltipHitPoly[10] = tmp.p2x; marker.tooltipHitPoly[11] = tmp.p2y;
+                    }
+                }else{
+                    mapctx.moveTo(tmp.p3x, tmp.p3y);
+                    mapctx.lineTo(tmp.p7x, tmp.p7y);
+                    mapctx.lineTo(tmp.p5x, tmp.p5y);
+                    mapctx.lineTo(tmp.p6x, tmp.p6y);
+                    mapctx.lineTo(tmp.p2x, tmp.p2y);
+                    mapctx.lineTo(tmp.p4x, tmp.p4y);
+                    if(marker.tooltipHitPoly){
+                        marker.tooltipHitPoly[0] = tmp.p3x; marker.tooltipHitPoly[1] = tmp.p3y;
+                        marker.tooltipHitPoly[2] = tmp.p7x; marker.tooltipHitPoly[3] = tmp.p7y;
+                        marker.tooltipHitPoly[4] = tmp.p5x; marker.tooltipHitPoly[5] = tmp.p5y;
+                        marker.tooltipHitPoly[6] = tmp.p6x; marker.tooltipHitPoly[7] = tmp.p6y;
+                        marker.tooltipHitPoly[8] = tmp.p2x; marker.tooltipHitPoly[9] = tmp.p2y;
+                        marker.tooltipHitPoly[10] = tmp.p4x; marker.tooltipHitPoly[11] = tmp.p4y;
+                    }
+                }
+                if(marker.tooltipHitPoly && marker.tooltipHitPoly.length > 12) marker.tooltipHitPoly.splice(12, marker.tooltipHitPoly.length-12);
+            }
+            mapctx.fill();
+        }
+    };
     for(const marker of MapData.markers){
         curSprite = null;
         marker.visible = false;
         if(marker.hidden || (marker.minZoom && MapData.view.scale < marker.minZoom) || (marker.maxZoom && MapData.view.scale > marker.maxZoom)) continue;
-        markerX = MapData.view.convertX(marker.position.x, marker.position.z);
-        markerY = MapData.view.convertY(marker.position.y, marker.position.z);
-        if( markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.width + Config.viewCullMargin ||
-            markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin ||
-            markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.height + Config.viewCullMargin ||
-            markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin )
-                continue; // View Culling
         if(!marker.tooltipPosition) marker.tooltipPosition = {};
-        marker.tooltipPosition.x = MapData.view.unconvertX(markerX / MapData.view.pixelRatio);
-        marker.tooltipPosition.y = MapData.view.unconvertY(markerY / MapData.view.pixelRatio);
+        if(marker.type != 'chunk'){
+            markerX = MapData.view.convertX(marker.position.x, marker.position.z);
+            markerY = MapData.view.convertY(marker.position.y, marker.position.z);
+            if( markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.width + Config.viewCullMargin ||
+                markerX + (marker.cullOffsetX ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin ||
+                markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio > mapCanvas.height + Config.viewCullMargin ||
+                markerY + (marker.cullOffsetY ?? 0) * MapData.view.scale * MapData.view.pixelRatio < -Config.viewCullMargin )
+                    continue; // View Culling
+            marker.tooltipPosition.x = markerX / MapData.view.pixelRatio;
+            marker.tooltipPosition.y = markerY / MapData.view.pixelRatio;
+        }
         switch(marker.type){
             case 'entity':
                 if(!(MapData.layers.markers && MapData.layers.entities)) break;
@@ -679,23 +915,85 @@ function redrawMap(){
                 marker.tooltipHitzone.radius = spriteSize;
                 break;
             case 'chunk':
-                if(!(MapData.layers.brickedchunks)) break;
+                if(MapData.layers.chunk_display == 0) continue;
+                markerX = MapData.view.convertX(marker.position.x, marker.position.z - marker.chunkSize / Config.coordScaleFac);
+                markerY = MapData.view.convertY(marker.position.y, marker.position.z - marker.chunkSize / Config.coordScaleFac);
+                tmp.topMarkerX = MapData.view.convertX(marker.position.x, marker.position.z + marker.chunkSize / Config.coordScaleFac);
+                tmp.topMarkerY = MapData.view.convertY(marker.position.y, marker.position.z + marker.chunkSize / Config.coordScaleFac);
+                spriteSize = (marker.chunkSize / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
+
+                if( Math.max(markerX, tmp.topMarkerX) + spriteSize < 0 ||
+                    Math.min(markerX, tmp.topMarkerX) > mapCanvas.width ||
+                    Math.max(markerY, tmp.topMarkerY) + spriteSize < 0 ||
+                    Math.min(markerY, tmp.topMarkerY) > mapCanvas.height)
+                        continue;
+                
                 marker.visible = true;
-                spriteSize = (2048 / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
-                mapctx.beginPath();
-                mapctx.rect(
-                    markerX,
-                    markerY,
-                    spriteSize,
-                    spriteSize
-                );
-                mapctx.fillStyle = marker.color;
-                mapctx.fill();
                 if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
-                marker.tooltipHitzone.width = spriteSize;
-                marker.tooltipHitzone.height = spriteSize;
-                marker.tooltipHitzone.offsetX = spriteSize * 0.5;
-                marker.tooltipHitzone.offsetY = -spriteSize * 0.5;
+                
+                if(MapData.layers.chunk_display & 1){
+                    marker.tooltipPosition.x = markerX / MapData.view.pixelRatio;
+                    marker.tooltipPosition.y = markerY / MapData.view.pixelRatio;
+                    marker.tooltipHitzone.offsetX = 0.5 * spriteSize;
+                    marker.tooltipHitzone.offsetY = 0.5 * spriteSize;
+                    marker.tooltipHitzone.width = spriteSize;
+                    marker.tooltipHitzone.height = spriteSize;
+
+                    mapctx.beginPath();
+                    if(MapData.matrix.depth == 0) mapctx.fillStyle = Config.chunk_gradient[0].hex;
+                    else mapctx.fillStyle = Color.blendGradient(Config.chunk_gradient, marker.position.z / MapData.matrix.depth).hex;
+                    mapctx.strokeStyle = mapctx.fillStyle;
+                    mapctx.lineWidth = 0.7;
+                    if(MapData.layers.chunk_display & 4){
+                        if(!marker.tooltipHitPoly) marker.tooltipHitPoly = [];
+                        drawCube(marker.chunkBorderMin, marker.chunkBorderMax, MapData.layers.chunk_display & 2, marker);
+                    }else{
+                        marker.tooltipHitPoly = null;
+                        mapctx.rect(
+                            markerX,
+                            markerY,
+                            spriteSize,
+                            spriteSize
+                        );
+                        if(MapData.layers.chunk_display & 2) mapctx.stroke();
+                        else mapctx.fill();
+                    }
+                }
+                if(MapData.layers.chunk_display & 2){
+                    marker.tooltipHitzone.offsetX = 0;
+                    marker.tooltipHitzone.offsetY = 0;
+                    marker.tooltipHitzone.width = (marker.chunkBoundsSize.y / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
+                    marker.tooltipHitzone.height = (marker.chunkBoundsSize.x / Config.coordScaleFac) * MapData.view.scale * MapData.view.pixelRatio;
+
+                    markerX = MapData.view.convertX(marker.chunkAveragePosition.y / Config.coordScaleFac, marker.chunkBoundsMax.z / Config.coordScaleFac);
+                    markerY = MapData.view.convertY(marker.chunkAveragePosition.x / Config.coordScaleFac, marker.chunkBoundsMax.z / Config.coordScaleFac);
+                    marker.tooltipPosition.x = markerX / MapData.view.pixelRatio;
+                    marker.tooltipPosition.y = markerY / MapData.view.pixelRatio;
+                    
+                    mapctx.beginPath();
+                    if(MapData.matrix.depth == 0) mapctx.fillStyle = Config.chunk_gradient[0].hex;
+                    else mapctx.fillStyle = Color.blendGradient(Config.chunk_gradient, marker.position.z / MapData.matrix.depth).hex;
+                    if(MapData.layers.chunk_display & 4){
+                        if(!marker.tooltipHitPoly) marker.tooltipHitPoly = [];
+                        drawCube(marker.chunkBoundsMin, marker.chunkBoundsMax, false, marker);
+                    }else{
+                        marker.tooltipHitPoly = null;
+                        mapctx.rect(
+                            markerX - marker.tooltipHitzone.width * 0.5,
+                            markerY - marker.tooltipHitzone.height * 0.5,
+                            marker.tooltipHitzone.width,
+                            marker.tooltipHitzone.height
+                        );
+                        mapctx.fill();
+                    }
+                    marker.tooltipHitzone.width /= MapData.view.pixelRatio;
+                    marker.tooltipHitzone.height /= MapData.view.pixelRatio;
+                }
+                if(marker.tooltipHitPoly){
+                    for(let i=0; i<marker.tooltipHitPoly.length; i++){
+                        marker.tooltipHitPoly[i] /= MapData.view.pixelRatio;
+                    }
+                }
                 break;
             case 'component':
                 if(!(MapData.layers.components)) break;
@@ -759,22 +1057,15 @@ function redrawMap(){
                 marker.visible = true;
                 markerCount++;
                 Stats.addCountForUser(marker.owner.userId);
-                curSprite = Config.spriteBounds.unknown;
-                spriteSize = 30;
+                mapctx.fillStyle = '#f0f';
+                mapctx.strokeStyle = '#000';
+                mapctx.beginPath();
+                mapctx.arc(markerX, markerY, 5, 0, 2 * Math.PI);
+                mapctx.stroke();
+                mapctx.fill();
+                if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
+                marker.tooltipHitzone.radius = 5;
                 break;
-        }
-        if(curSprite != null){
-            mapctx.drawImage(
-                mapSprites,
-                curSprite.x,
-                curSprite.y,
-                curSprite.width,
-                curSprite.height,
-                markerX-(0.5*spriteSize)*MapData.view.pixelRatio,
-                markerY-(0.5*spriteSize)*MapData.view.pixelRatio,
-                spriteSize*MapData.view.pixelRatio,
-                spriteSize*MapData.view.pixelRatio
-            );
         }
     }
     markerCountDisplay.innerHTML = markerCount + ' markers visible';
