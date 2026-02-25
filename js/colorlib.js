@@ -1,5 +1,9 @@
 'use strict';
 
+import * as Utils from './utillib.js';
+
+const rgbaRegex = /rgba?\(([\d\.]+), ?([\d\.]+), ?([\d\.]+)(?:, ([\d\.]+))?\)/;
+
 export class Color{
     r = 0;
     g = 0;
@@ -14,15 +18,26 @@ export class Color{
      */
     constructor(r, g, b, a){
         if(typeof(r) == 'string'){
-            r = r.replace('#', '');
-            if(r.length == 3) r = r.charAt(0)+r.charAt(0)+r.charAt(1)+r.charAt(1)+r.charAt(2)+r.charAt(2);
-            else if(r.length == 4) r = r.charAt(0)+r.charAt(0)+r.charAt(1)+r.charAt(1)+r.charAt(2)+r.charAt(2)+r.charAt(3)+r.charAt(3);
-            if(r.length == 6 || r.length == 8){
-                this.r = Number('0x'+r.substring(0,2))/255;
-                this.g = Number('0x'+r.substring(2,4))/255;
-                this.b = Number('0x'+r.substring(4,6))/255;
+            if(r.length == 0) return;
+            if(r[0] == '#'){
+                r = r.replace('#', '');
+                if(r.length == 3) r = r.charAt(0)+r.charAt(0)+r.charAt(1)+r.charAt(1)+r.charAt(2)+r.charAt(2);
+                else if(r.length == 4) r = r.charAt(0)+r.charAt(0)+r.charAt(1)+r.charAt(1)+r.charAt(2)+r.charAt(2)+r.charAt(3)+r.charAt(3);
+                if(r.length == 6 || r.length == 8){
+                    this.r = Number('0x'+r.substring(0,2))/255;
+                    this.g = Number('0x'+r.substring(2,4))/255;
+                    this.b = Number('0x'+r.substring(4,6))/255;
+                }
+                if(r.length == 8) this.a = Number('0x'+r.substring(6,8))/255;
+            }else{
+                let match = rgbaRegex.exec(r);
+                if(match){
+                    this.r = Number(match[1]) / 255;
+                    this.g = Number(match[2]) / 255;
+                    this.b = Number(match[3]) / 255;
+                    this.a = Number(match[4]) ?? 1.0;
+                }
             }
-            if(r.length == 8) this.a = Number('0x'+r.substring(6,8))/255;
         }else{
             this.r += r ?? this.r;
             this.g += g ?? this.g;
@@ -62,6 +77,20 @@ export class Color{
         this.r + factor,
         this.g + factor,
         this.b + factor,
+        this.a
+    );
+
+    lighten = factor => new Color(
+        Utils.lerp(this.r, 1.0, factor),
+        Utils.lerp(this.g, 1.0, factor),
+        Utils.lerp(this.b, 1.0, factor),
+        this.a
+    );
+
+    darken = factor => new Color(
+        Utils.lerp(this.r, 0.0, factor),
+        Utils.lerp(this.g, 0.0, factor),
+        Utils.lerp(this.b, 0.0, factor),
         this.a
     );
 

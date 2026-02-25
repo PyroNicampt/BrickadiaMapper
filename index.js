@@ -25,10 +25,10 @@ let isNavigating = false;
 document.addEventListener('DOMContentLoaded', async () => {
     //await loadMapperData('data/mapperdata.json');
     //await loadMapperData('data/mapperdata.gz');
-    MapData.sortMarkers();
 
     MapData.matrix.initialize();
     MapData.view.initialize();
+    MapData.sortMarkers();
     redrawMap();
     mapNavigationSetup();
     Legend.initialize();
@@ -45,16 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         warningPanel.style.display = 'none';
         for(let item of event.dataTransfer.items){
             if(item.kind != 'file') continue;
-            console.log(item.type)
             if(item.type === 'application/json' || item.type === 'text/json'){
                 await loadMapperData(JSON.parse(await(item.getAsFile().text())));
             }else if(item.type === 'application/x-gzip'){
                 await loadMapperData(await new Response(item.getAsFile().stream().pipeThrough(new DecompressionStream('gzip'))).json());
             }
         }
-        MapData.sortMarkers();
         MapData.matrix.initialize();
         MapData.view.initialize();
+        MapData.sortMarkers();
         redrawMap();
     }
 });
@@ -200,12 +199,23 @@ function mapNavigationSetup(){
     const navSkew = document.getElementById('navSkew');
     const navSkewHandle = document.getElementById('navSkewHandle');
     const skewPow = 2;
+    let lastSkewQuadrant = 0;
     const setSkew = (x, y) => {
         navSkewHandle.style.transform = `translate(${x*navSkew.clientWidth*0.5}px, ${y*navSkew.clientHeight*0.5}px)`;
         x = Math.sign(x) * Math.pow(Math.abs(x), skewPow);
         y = Math.sign(y) * Math.pow(Math.abs(y), skewPow);
+        if(x == 0 && y == 0) MapData.view.skewQuadrant = 0;
+        else if(x < 0 && y < 0) MapData.view.skewQuadrant = 1;
+        else if(x > 0 && y < 0) MapData.view.skewQuadrant = 2;
+        else if(x < 0 && y > 0) MapData.view.skewQuadrant = 3;
+        else if(x > 0 && y > 0) MapData.view.skewQuadrant = 4;
         MapData.view.skewX = x * 2;
         MapData.view.skewY = y * 2;
+
+        if(lastSkewQuadrant != MapData.view.skewQuadrant)
+            MapData.sortMarkers();
+        lastSkewQuadrant = MapData.view.skewQuadrant;
+        
         MapData.view.dirty = true;
     };
     const skewDownHandler = e => {
@@ -302,6 +312,7 @@ function tooltipSetup(){
                         tooltip.innerHTML = tooltipContents.replaceAll('\n','<br>');
                         Utils.attachClipboardHooks(tooltip);
                         prevTooltipContents = tooltipContents;
+                        MapData.view.dirty = true;
                     }
                     let tooltipWidth = tooltip.clientWidth;
                     let tooltipHeight = tooltip.clientHeight;
@@ -313,13 +324,17 @@ function tooltipSetup(){
                         tooltipY -= tooltipHeight + 10;
                     tooltip.style.transform = `translate(${tooltipX}px, ${tooltipY}px)`;
                     tooltip.style.display = '';
-                    mapCanvas.style.cursor = 'crosshair';
+                    mapCanvas.style.cursor = 'pointer';
                     tooltipActive = true;
                 }
             }else{
                 if(!(freezeTooltip || mouseOverTooltip)){
                     tooltip.style.display = 'none';
                     tooltipActive = false;
+                    if(prevTooltipContents){
+                        prevTooltipContents = undefined;
+                        MapData.view.dirty = true;
+                    }
                 }
                 mapCanvas.style.cursor = '';
             }
@@ -482,6 +497,7 @@ async function loadMapperData(file){
         for(let chunk of mDat.chunks){
             let markerData = {
                 type: 'chunk',
+                name: `Chunk ${chunk.index3d.x}_${chunk.index3d.y}_${chunk.index3d.z}.mps`,
                 position: {
                     y: (chunk.position.x + chunk.size * 0.5)/Config.coordScaleFac,
                     x: (chunk.position.y + chunk.size * -0.5)/Config.coordScaleFac,
@@ -709,7 +725,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p8x, tmp.p8y);
                     mapctx.moveTo(tmp.p7x, tmp.p7y);
                     mapctx.lineTo(tmp.p3x, tmp.p3y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
                         marker.tooltipHitPoly[2] = tmp.p5x; marker.tooltipHitPoly[3] = tmp.p5y;
                         marker.tooltipHitPoly[4] = tmp.p6x; marker.tooltipHitPoly[5] = tmp.p6y;
@@ -730,7 +746,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p7x, tmp.p7y);
                     mapctx.moveTo(tmp.p5x, tmp.p5y);
                     mapctx.lineTo(tmp.p1x, tmp.p1y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p2x; marker.tooltipHitPoly[1] = tmp.p2y;
                         marker.tooltipHitPoly[2] = tmp.p6x; marker.tooltipHitPoly[3] = tmp.p6y;
                         marker.tooltipHitPoly[4] = tmp.p8x; marker.tooltipHitPoly[5] = tmp.p8y;
@@ -751,7 +767,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p5x, tmp.p5y);
                     mapctx.moveTo(tmp.p6x, tmp.p6y);
                     mapctx.lineTo(tmp.p2x, tmp.p2y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p4x; marker.tooltipHitPoly[1] = tmp.p4y;
                         marker.tooltipHitPoly[2] = tmp.p8x; marker.tooltipHitPoly[3] = tmp.p8y;
                         marker.tooltipHitPoly[4] = tmp.p7x; marker.tooltipHitPoly[5] = tmp.p7y;
@@ -772,7 +788,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p6x, tmp.p6y);
                     mapctx.moveTo(tmp.p8x, tmp.p8y);
                     mapctx.lineTo(tmp.p4x, tmp.p4y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p3x; marker.tooltipHitPoly[1] = tmp.p3y;
                         marker.tooltipHitPoly[2] = tmp.p7x; marker.tooltipHitPoly[3] = tmp.p7y;
                         marker.tooltipHitPoly[4] = tmp.p5x; marker.tooltipHitPoly[5] = tmp.p5y;
@@ -790,7 +806,7 @@ function redrawMap(){
                 mapctx.lineTo(tmp.p4x, tmp.p4y);
                 mapctx.lineTo(tmp.p3x, tmp.p3y);
                 mapctx.lineTo(tmp.p1x, tmp.p1y);
-                if(marker.tooltipHitPoly){
+                if(marker?.tooltipHitPoly){
                     marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
                     marker.tooltipHitPoly[2] = tmp.p2x; marker.tooltipHitPoly[3] = tmp.p2y;
                     marker.tooltipHitPoly[4] = tmp.p4x; marker.tooltipHitPoly[5] = tmp.p4y;
@@ -805,7 +821,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p8x, tmp.p8y);
                     mapctx.lineTo(tmp.p4x, tmp.p4y);
                     mapctx.lineTo(tmp.p3x, tmp.p3y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p1x; marker.tooltipHitPoly[1] = tmp.p1y;
                         marker.tooltipHitPoly[2] = tmp.p5x; marker.tooltipHitPoly[3] = tmp.p5y;
                         marker.tooltipHitPoly[4] = tmp.p6x; marker.tooltipHitPoly[5] = tmp.p6y;
@@ -820,7 +836,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p7x, tmp.p7y);
                     mapctx.lineTo(tmp.p3x, tmp.p3y);
                     mapctx.lineTo(tmp.p1x, tmp.p1y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p2x; marker.tooltipHitPoly[1] = tmp.p2y;
                         marker.tooltipHitPoly[2] = tmp.p6x; marker.tooltipHitPoly[3] = tmp.p6y;
                         marker.tooltipHitPoly[4] = tmp.p8x; marker.tooltipHitPoly[5] = tmp.p8y;
@@ -835,7 +851,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p5x, tmp.p5y);
                     mapctx.lineTo(tmp.p1x, tmp.p1y);
                     mapctx.lineTo(tmp.p2x, tmp.p2y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p4x; marker.tooltipHitPoly[1] = tmp.p4y;
                         marker.tooltipHitPoly[2] = tmp.p8x; marker.tooltipHitPoly[3] = tmp.p8y;
                         marker.tooltipHitPoly[4] = tmp.p7x; marker.tooltipHitPoly[5] = tmp.p7y;
@@ -850,7 +866,7 @@ function redrawMap(){
                     mapctx.lineTo(tmp.p6x, tmp.p6y);
                     mapctx.lineTo(tmp.p2x, tmp.p2y);
                     mapctx.lineTo(tmp.p4x, tmp.p4y);
-                    if(marker.tooltipHitPoly){
+                    if(marker?.tooltipHitPoly){
                         marker.tooltipHitPoly[0] = tmp.p3x; marker.tooltipHitPoly[1] = tmp.p3y;
                         marker.tooltipHitPoly[2] = tmp.p7x; marker.tooltipHitPoly[3] = tmp.p7y;
                         marker.tooltipHitPoly[4] = tmp.p5x; marker.tooltipHitPoly[5] = tmp.p5y;
@@ -859,7 +875,7 @@ function redrawMap(){
                         marker.tooltipHitPoly[10] = tmp.p4x; marker.tooltipHitPoly[11] = tmp.p4y;
                     }
                 }
-                if(marker.tooltipHitPoly && marker.tooltipHitPoly.length > 12) marker.tooltipHitPoly.splice(12, marker.tooltipHitPoly.length-12);
+                if(marker?.tooltipHitPoly && marker.tooltipHitPoly.length > 12) marker.tooltipHitPoly.splice(12, marker.tooltipHitPoly.length-12);
             }
             mapctx.fill();
         }
@@ -899,16 +915,25 @@ function redrawMap(){
                 if(marker.frozen) mapctx.fillStyle = Config.colors.entity_frozen;
                 else if(marker.sleeping) mapctx.fillStyle = Config.colors.entity_asleep;
                 else mapctx.fillStyle = Config.colors.entity_awake;
+                if(MapData.tooltipMarker == marker)
+                    mapctx.fillStyle = new Color(mapctx.fillStyle).lighten(0.6).hex;
                 mapctx.strokeStyle = Config.colors.outline;
                 mapctx.lineWidth = 2.0;
                 mapctx.beginPath();
                 mapctx.arc(
                     markerX,
                     markerY,
-                    spriteSize,
+                    MapData.tooltipMarker == marker ? spriteSize * 1.5 : spriteSize,
                     0,
                     2 * Math.PI
                 );
+                if(MapData.tooltipMarker == marker){
+                    mapctx.save();
+                    mapctx.lineWidth = 6.0;
+                    mapctx.strokeStyle = Config.colors.select;
+                    mapctx.stroke();
+                    mapctx.restore();
+                }
                 mapctx.stroke();
                 mapctx.fill();
                 if(!marker.tooltipHitzone) marker.tooltipHitzone = {};
@@ -947,6 +972,12 @@ function redrawMap(){
                     if(MapData.layers.chunk_display & 4){
                         if(!marker.tooltipHitPoly) marker.tooltipHitPoly = [];
                         drawCube(marker.chunkBorderMin, marker.chunkBorderMax, MapData.layers.chunk_display & 2, marker);
+                        if(MapData.tooltipMarker == marker){
+                            mapctx.beginPath();
+                            mapctx.lineWidth = 3;
+                            mapctx.strokeStyle = Config.colors.select;
+                            drawCube(marker.chunkBorderMin, marker.chunkBorderMax, true);
+                        }
                     }else{
                         marker.tooltipHitPoly = null;
                         mapctx.rect(
@@ -957,6 +988,11 @@ function redrawMap(){
                         );
                         if(MapData.layers.chunk_display & 2) mapctx.stroke();
                         else mapctx.fill();
+                        if(MapData.tooltipMarker == marker){
+                            mapctx.lineWidth = 3;
+                            mapctx.strokeStyle = Config.colors.select;
+                            mapctx.stroke();
+                        }
                     }
                 }
                 if(MapData.layers.chunk_display & 2){
@@ -976,6 +1012,12 @@ function redrawMap(){
                     if(MapData.layers.chunk_display & 4){
                         if(!marker.tooltipHitPoly) marker.tooltipHitPoly = [];
                         drawCube(marker.chunkBoundsMin, marker.chunkBoundsMax, false, marker);
+                        if(MapData.tooltipMarker == marker){
+                            mapctx.beginPath();
+                            mapctx.lineWidth = 3;
+                            mapctx.strokeStyle = Config.colors.select;
+                            drawCube(marker.chunkBoundsMin, marker.chunkBoundsMax, true);
+                        }
                     }else{
                         marker.tooltipHitPoly = null;
                         mapctx.rect(
@@ -985,6 +1027,11 @@ function redrawMap(){
                             marker.tooltipHitzone.height
                         );
                         mapctx.fill();
+                        if(MapData.tooltipMarker == marker){
+                            mapctx.lineWidth = 3;
+                            mapctx.strokeStyle = Config.colors.select;
+                            mapctx.stroke();
+                        }
                     }
                     marker.tooltipHitzone.width /= MapData.view.pixelRatio;
                     marker.tooltipHitzone.height /= MapData.view.pixelRatio;
@@ -1024,6 +1071,8 @@ function redrawMap(){
                         3 * Math.PI
                     );
                     mapctx.strokeStyle = marker.componentRadius > 0 ? Config.colors.radius : Config.colors.radius_negative;
+                    if(MapData.tooltipMarker == marker)
+                        mapctx.strokeStyle = Color.blendSrgb(new Color(Config.colors.select), new Color(mapctx.strokeStyle), 0.1).hex;
                     if(marker.componentImpact == 3) mapctx.lineWidth = 1.5;
                     else if(marker.componentImpact == 2) mapctx.lineWidth = 1.0;
                     else if(marker.componentImpact == 1) mapctx.lineWidth = 0.5;
@@ -1031,19 +1080,30 @@ function redrawMap(){
                     mapctx.setLineDash([20, 5]);
                     mapctx.stroke();
                 }
+                mapctx.setLineDash([]);
                 mapctx.beginPath();
+                tmp.spriteSize = MapData.tooltipMarker == marker ? spriteSize * 1.5 : spriteSize;
                 mapctx.rect(
-                    markerX - 0.5 * spriteSize,
-                    markerY - 0.5 * spriteSize,
-                    spriteSize,
-                    spriteSize
+                    markerX - 0.5 * tmp.spriteSize,
+                    markerY - 0.5 * tmp.spriteSize,
+                    tmp.spriteSize,
+                    tmp.spriteSize
                 );
                 if(marker.componentImpact == 3) mapctx.fillStyle = Config.colors.impact_high;
                 else if(marker.componentImpact == 2) mapctx.fillStyle = Config.colors.impact_med;
                 else if(marker.componentImpact == 0) mapctx.fillStyle = Config.colors.impact_none;
                 else mapctx.fillStyle = Config.colors.impact_low;
+                if(MapData.tooltipMarker == marker)
+                    mapctx.fillStyle = new Color(mapctx.fillStyle).lighten(0.6).hex;
                 mapctx.strokeStyle = Config.colors.outline;
                 mapctx.lineWidth = 1.0;
+                if(MapData.tooltipMarker == marker){
+                    mapctx.save();
+                    mapctx.lineWidth = 6.0;
+                    mapctx.strokeStyle = Config.colors.select;
+                    mapctx.stroke();
+                    mapctx.restore();
+                }
                 mapctx.stroke();
                 mapctx.fill();
                 if(!marker.tooltipHitzone) marker.tooltipHitzone = {};

@@ -45,6 +45,7 @@ export const colors = {
     radius: '#333388',
     radius_negative: '#ff3388',
     grid: '#222a',
+    select: '#ffb0b5',
 };
 
 export const spriteBounds = {

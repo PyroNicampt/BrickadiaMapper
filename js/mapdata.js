@@ -77,8 +77,9 @@ export let view = {
         }
         view.dirty = false;
         view.dynDirty = false;
-        view.skewX = 0;
-        view.skewY = 0;
+        view.skewX = view.skewX ?? 0;
+        view.skewY = view.skewY ?? 0;
+        view.skewQuadrant = 0;
 
         view.convertX = (x, z) => {
             return x * view.scale * view.pixelRatio + view.x * view.pixelRatio + z * view.skewX * view.pixelRatio * view.scale;
@@ -106,6 +107,7 @@ export function sortMarkers(){
     markers.sort(markerSortFunction);
 }
 
+let sortTmp = {};
 function markerSortFunction(a, b){
     if(a.type != b.type){ //Different marker types
         if(a.type == 'entity') return 1;
@@ -126,6 +128,15 @@ function markerSortFunction(a, b){
             }
         }else if(a.type == 'component'){
             if(a.componentImpact != b.componentImpact) return a.componentImpact - b.componentImpact;
+        }else if(a.type == 'chunk'){
+            if(a.position.z - b.position.z != 0) return a.position.z - b.position.z;
+            sortTmp.y = Math.sign(a.position.y - b.position.y);
+            sortTmp.x = Math.sign(a.position.x - b.position.x);
+            if(view.skewQuadrant == 2 || view.skewQuadrant == 4)
+                sortTmp.x = -sortTmp.x;
+            if(view.skewQuadrant == 2 || view.skewQuadrant == 1)
+                sortTmp.y = -sortTmp.y;
+            return sortTmp.y + sortTmp.x;
         }
     }
     return a.position.z - b.position.z;
@@ -143,6 +154,7 @@ export function addMarker(markerData, level = 0){
 }
 
 export let tooltipClipboard = '';
+export let tooltipMarker;
 
 /**
  * Finds the relevant tooltip for where the cursor is (if possible)
@@ -154,6 +166,7 @@ export let tooltipClipboard = '';
  */
 export function testTooltip(cursorX, cursorY){
     tooltipClipboard = '';
+    tooltipMarker = undefined;
 
     let finalTooltip = '';
     let radius = 0;
@@ -166,6 +179,7 @@ export function testTooltip(cursorX, cursorY){
             if(marker.boundsCheck(cursorX, cursorY)){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
+                tooltipMarker = marker ?? tooltipMarker;
             }
         }else if(marker.tooltipHitPoly){
             let minX = Infinity;
@@ -191,6 +205,7 @@ export function testTooltip(cursorX, cursorY){
                 if(isColliding){
                     finalTooltip = marker.tooltip ?? finalTooltip;
                     tooltipClipboard = marker.clipboard ?? tooltipClipboard;
+                    tooltipMarker = marker ?? tooltipMarker;
                 }
             }
         }else if(marker.tooltipHitzone && marker.tooltipHitzone.width && marker.tooltipHitzone.height){
@@ -202,6 +217,7 @@ export function testTooltip(cursorX, cursorY){
                 && marker.tooltipPosition.y - cursorY + (marker.tooltipHitzone.offsetY ?? 0) >= -height){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
+                tooltipMarker = marker ?? tooltipMarker;
             }
         }else{
             if(marker.tooltipHitzone)
@@ -211,6 +227,7 @@ export function testTooltip(cursorX, cursorY){
             if(Math.pow(marker.tooltipPosition.x - cursorX, 2) + Math.pow(marker.tooltipPosition.y - cursorY, 2) <= radius * radius){
                 finalTooltip = marker.tooltip ?? finalTooltip;
                 tooltipClipboard = marker.clipboard ?? tooltipClipboard;
+                tooltipMarker = marker ?? tooltipMarker;
             }
         }
     }
