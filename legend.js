@@ -28,13 +28,32 @@ let settingEntries = [
             let regMatch = /^\/(?<expression>.+)\/(?<flags>[dgimsuvy]*)$/.exec(state);
             if(regMatch){
                 try{
-                    MapData.setSearchFilter(RegExp(regMatch.groups.expression, regMatch.groups.flags));
+                    MapData.layers.searchFilter = RegExp(regMatch.groups.expression, regMatch.groups.flags);
                 }catch(e){}
             }else{
-                MapData.setSearchFilter(state);
+                MapData.layers.searchFilter = state;
             }
             MapData.view.dirty = true;
         }
+    },
+    {
+        label: 'Owner Source',
+        id: 'dropdown_ownerFilterSource',
+        saveState: true,
+        state: 1,
+        options: [
+            [3, 'Both'],
+            [1, 'Current'],
+            [2, 'Original'],
+        ],
+        func: state =>{
+            state = Number(state);
+            MapData.layers.searchFilterSource = state;
+            MapData.view.dirty = true;
+        }
+    },
+    {
+        id: 'hr'
     },
     {
         label: 'Markers',

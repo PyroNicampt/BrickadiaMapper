@@ -410,6 +410,8 @@ async function loadMapperData(file){
     if(mDat.entities){
         for(let i=0; i<mDat.entities.PersistentIndices.length; i++){
             let ownerIndex = mDat.entities.OwnerIndices[i];
+            let originalOwnerIndex = mDat.entities.OwnerIndices[i];
+            if(mDat.entities.OriginalOwnerIndices) originalOwnerIndex = mDat.entities.OriginalOwnerIndices[i];
             let markerData = {
                 type: 'entity',
                 position: {
@@ -440,6 +442,11 @@ async function loadMapperData(file){
                     displayName: mDat.owners.DisplayNames[ownerIndex],
                     userName: mDat.owners.UserNames[ownerIndex],
                     userId: mDat.owners.UserIds[ownerIndex],
+                },
+                originalOwner: {
+                    displayName: mDat.owners.DisplayNames[originalOwnerIndex],
+                    userName: mDat.owners.UserNames[originalOwnerIndex],
+                    userId: mDat.owners.UserIds[originalOwnerIndex],
                 },
             };
             markerData.colors = {};
@@ -475,7 +482,8 @@ async function loadMapperData(file){
                 else physState = 'Awake';
             }
             markerData.tooltip = `<h1>Entity ${markerData.index}</h1><hr>`
-                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (${Utils.sanitize(markerData.owner.userName)}) <span class="smol quiet"><a href="https://www.brickadia.com/users/${markerData.owner.userId}">${markerData.owner.userId}</a></span></div>`
+                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (<a href="https://www.brickadia.com/users/${markerData.owner.userId}" title="${markerData.owner.userId}" data-clipboard="${markerData.owner.userId}">${Utils.sanitize(markerData.owner.userName)}</a>)</div>`
+                + (markerData.owner.userId != markerData.originalOwner.userId ? `<div><b>Original Owner:</b> ${Utils.sanitize(markerData.originalOwner.displayName)} (<a href="https://www.brickadia.com/users/${markerData.originalOwner.userId}" title="${markerData.originalOwner.userId}" data-clipboard="${markerData.originalOwner.userId}">${Utils.sanitize(markerData.originalOwner.userName)}</a>)</div>` : '')
                 + instanceInfo
                 + `<div><b>Position:</b> ${formatVec(truePosition, 2)}</div>`
                 + `<div><b>Velocity:</b> ${formatVec(markerData.velocity, 3)}</div>`
@@ -557,13 +565,19 @@ async function loadMapperData(file){
                     userName: mDat.owners.UserNames[component.owner],
                     userId: mDat.owners.UserIds[component.owner],
                 },
+                originalOwner: {
+                    displayName: mDat.owners.DisplayNames[component.originalOwner ?? component.owner],
+                    userName: mDat.owners.UserNames[component.originalOwner ?? component.owner],
+                    userId: mDat.owners.UserIds[component.originalOwner ?? component.owner],
+                },
                 componentImpact: 1,
             };
 
             let instanceInfo = '';
             let finalProperty;
             markerData.tooltip = `<h1>${component.name.replaceAll(/.*_(.+)$/g, '$1')} Component</h1><hr>`
-                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (${Utils.sanitize(markerData.owner.userName)}) <span class="smol quiet"><a href="https://www.brickadia.com/users/${markerData.owner.userId}">${markerData.owner.userId}</a></span></div>`
+                + `<div><b>Owner:</b> ${Utils.sanitize(markerData.owner.displayName)} (<a href="https://www.brickadia.com/users/${markerData.owner.userId}" title="${markerData.owner.userId}" data-clipboard="${markerData.owner.userId}">${Utils.sanitize(markerData.owner.userName)}</a>)</div>`
+                + (markerData.owner.userId != markerData.originalOwner.userId ? `<div><b>Original Owner:</b> ${Utils.sanitize(markerData.originalOwner.displayName)} (<a href="https://www.brickadia.com/users/${markerData.originalOwner.userId}" title="${markerData.originalOwner.userId}" data-clipboard="${markerData.originalOwner.userId}">${Utils.sanitize(markerData.originalOwner.userName)}</a>)</div>` : '')
                 + `<div><b>Grid:</b> ${component.grid == 1 ? 'World' : component.grid}</div>`
                 + formatProperties(component, ['name', 'class', 'position', 'owner', 'grid'])
                 + `<div><b>Position:</b> ${formatVec(component.position, 2)}</div>`
@@ -902,7 +916,10 @@ function redrawMap(){
                 if(!MapData.layers.entities_frozen && marker.frozen) break;
                 if(!MapData.layers.entities_asleep && marker.sleeping) break;
                 if(!MapData.layers.entities_awake && !(marker.frozen || marker.sleeping)) break;
-                if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
+                if(!(
+                    MapData.layers.searchFilterSource & 1 && Utils.testOwner(MapData.layers.searchFilter, marker.owner)
+                    || MapData.layers.searchFilterSource & 2 && Utils.testOwner(MapData.layers.searchFilter, marker.originalOwner)
+                )) break;
                 if(!(
                        MapData.layers.entity_mask & 1 && marker.isGrid && !marker.hasEngine
                     || MapData.layers.entity_mask & 2 && marker.isGrid && marker.hasEngine
@@ -1045,7 +1062,10 @@ function redrawMap(){
             case 'component':
                 if(!(MapData.layers.components)) break;
                 if(!MapData.layers['component_'+marker.componentCategory]) break;
-                if(!Utils.testOwner(MapData.searchFilter, marker.owner)) break;
+                if(!(
+                    MapData.layers.searchFilterSource & 1 && Utils.testOwner(MapData.layers.searchFilter, marker.owner)
+                    || MapData.layers.searchFilterSource & 2 && Utils.testOwner(MapData.layers.searchFilter, marker.originalOwner)
+                )) break;
                 if(    marker.componentImpact == 0 && !(MapData.layers.impact_mask & 1)
                     || marker.componentImpact == 1 && !(MapData.layers.impact_mask & 2)
                     || marker.componentImpact == 2 && !(MapData.layers.impact_mask & 4)
@@ -1132,9 +1152,10 @@ function redrawMap(){
     if(Stats.show){
         let statsText = `${markerCount} markers visible<hr>`;
         for(let stat of Stats.getStats()){
-            statsText += `<div>${stat.count} > <b>${stat.displayName}</b> (<a href="https://www.brickadia.com/users/${stat.userId}" title="${stat.userId}">${stat.userName}</a>)`;
+            statsText += `<div>${stat.count} > <b>${stat.displayName}</b> (<a href="https://www.brickadia.com/users/${stat.userId}" data-clipboard="${stat.userId}" title="${stat.userId}">${stat.userName}</a>)`;
         }
         statsPanel.innerHTML = statsText;
+        Utils.attachClipboardHooks(statsPanel);
     }
     MapData.view.dirty = false;
 }
