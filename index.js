@@ -663,6 +663,19 @@ async function loadMapperData(file){
                 case 'Component_BrickPropertyChanger':
                     markerData.componentCategory = 'propertychangers';
                     break;
+                case 'Component_Internal_Slider':
+                case 'Component_Internal_ServoSlider':
+                case 'Component_Internal_RigidSlider':
+                case 'Component_Internal_MotorSlider':
+                case 'Component_Internal_Joint_Wheel':
+                case 'Component_Internal_Servo':
+                case 'Component_Internal_RigidBearing':
+                case 'Component_Internal_Motor':
+                case 'Component_Internal_Bearing':
+                    markerData.componentCategory = 'joints';
+                    if((component.Power ?? 0) > 1000 || (component.TopSpeed ?? 0) > 1000 || (component.DrivePower ?? 0) > 1000) markerData.componentImpact = 2;
+                    if((component.Power ?? 0) > 100000 || (component.TopSpeed ?? 0) > 100000 || (component.DrivePower ?? 0) > 100000) markerData.componentImpact = 3;
+                    break;
                 default:
                     markerData.componentCategory = 'others';
                     break;

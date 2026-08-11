@@ -267,6 +267,16 @@ let settingEntries = [
                         }
                     },
                     {
+                        label: 'Joints',
+                        id: 'toggle_component_joints',
+                        saveState: true,
+                        state: false,
+                        func: state =>{
+                            MapData.layers.component_joints = state;
+                            MapData.view.dirty = true;
+                        }
+                    },
+                    {
                         label: 'Other',
                         id: 'toggle_component_others',
                         saveState: true,
